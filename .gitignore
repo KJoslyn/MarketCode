@@ -1,0 +1,8 @@
+*/obj/
+*/bin/
+logs/
+.vs/
+packages/
+PythonCode/
+td_state*
+Config.cs
