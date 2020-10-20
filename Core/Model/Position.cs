@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Core.Model
+﻿namespace Core.Model
 {
     public class Position
     {
-        public int shortQuantity;
-        public float averagePrice;
-        public int longQuantity;
-        //public Instrument instrument;
-        public float marketValue;
+        public virtual float ShortQuantity { get; init; }
+        public virtual float AveragePrice { get; init; }
+        public virtual float LongQuantity { get; init; }
+        public virtual Instrument Instrument { get; init; }
+        public virtual float MarketValue { get; init; }
     }
 }

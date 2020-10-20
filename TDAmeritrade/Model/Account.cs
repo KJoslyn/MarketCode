@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Core.Model;
-
-namespace TDAmeritrade.Model
+﻿namespace TDAmeritrade.Model
 {
-    public class Account
+    internal class Account
     {
-        IList<Position> positions;
+        public SecuritiesAccount SecuritiesAccount { get; init; }
     }
 }

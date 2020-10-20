@@ -1,15 +1,9 @@
-using Core;
-using Core.Model;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using TDAmeritrade;
 
 namespace LottoXService
 {
@@ -33,7 +27,7 @@ namespace LottoXService
             {
                 Log.Information("LottoX Application Starting Up");
                 CreateHostBuilder(args).Build().Run();
-            } 
+            }
             catch (Exception ex)
             {
                 // TODO: This will actually catch any error thrown in the worker. Need to read about services and how they work.

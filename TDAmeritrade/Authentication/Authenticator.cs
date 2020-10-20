@@ -2,12 +2,6 @@
 using RestSharp;
 using Serilog;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TDAmeritrade.Authentication
 {
@@ -19,7 +13,7 @@ namespace TDAmeritrade.Authentication
         public static void Authenticate()
         {
             AuthInfo _authInfo = AuthInfo.Read();
-            if (AccessTokenNeedsUpdate(_authInfo) || RefreshTokenNeedsUpdate(_authInfo)) 
+            if (AccessTokenNeedsUpdate(_authInfo) || RefreshTokenNeedsUpdate(_authInfo))
             {
                 AuthResponse response = RequestAuthTokens(_authInfo);
                 AuthInfo newAuthInfo = new AuthInfo(response, _authInfo);
@@ -29,13 +23,13 @@ namespace TDAmeritrade.Authentication
 
         private static Boolean AccessTokenNeedsUpdate(AuthInfo authInfo)
         {
-            return DateTime.Compare(authInfo.access_token_expires_at_date, 
+            return DateTime.Compare(authInfo.access_token_expires_at_date,
                 DateTime.Now.AddMinutes(nMinutesBeforeAccessTokenUpdate)) < 0;
         }
 
         private static Boolean RefreshTokenNeedsUpdate(AuthInfo authInfo)
         {
-            return DateTime.Compare(authInfo.refresh_token_expires_at_date, 
+            return DateTime.Compare(authInfo.refresh_token_expires_at_date,
                 DateTime.Now.AddDays(nDaysBeforeRefreshTokenUpdate)) < 0;
         }
 
@@ -51,7 +45,8 @@ namespace TDAmeritrade.Authentication
             {
                 Log.Information("Requesting new REFRESH token");
                 request.AddParameter("access_type", "offline");
-            } else
+            }
+            else
             {
                 Log.Information("Requesting new access token only");
             }
