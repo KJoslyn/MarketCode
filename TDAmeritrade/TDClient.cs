@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Core;
+﻿using Core;
 using Core.Model;
-using TDAmeritrade.Model;
 using Newtonsoft.Json;
 using RestSharp;
-using TDAmeritrade.Authentication;
 using Serilog;
+using System.Collections.Generic;
+using System.Linq;
+using TDAmeritrade.Authentication;
+using TDAmeritrade.Model;
 
 namespace TDAmeritrade
 {
@@ -37,24 +33,13 @@ namespace TDAmeritrade
             return response;
         }
 
-        public Position[] GetPositions()
+        public IList<Position> GetPositions()
         {
             RestRequest request = CreateRequest(Method.GET);
+            request.AddParameter("fields", "positions");
             IRestResponse response = ExecuteRequest(AccountClient, request);
-
-            //Account account = JsonConvert.DeserializeObject<Account>(response.Content);
-
-            Log.Information("Called GetPositions");
-
-            //using (StreamReader r = new StreamReader("C:/Users/Admin/WindowsServices/MarketCode/TDAmeritrade/test_response.json"))
-            //{
-            //    string json = r.ReadToEnd();
-            //    Account account = JsonConvert.DeserializeObject<Account>(json);
-            //    Console.WriteLine(account);
-            //}
-
-            Log.Error("GetPositions() is not implemented");
-            throw new NotImplementedException();
+            Account account = JsonConvert.DeserializeObject<Account>(response.Content);
+            return account.SecuritiesAccount.Positions.ToList();
         }
 
         private RestRequest CreateRequest(Method method)

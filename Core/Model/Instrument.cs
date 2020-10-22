@@ -1,40 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Core.Model
+﻿namespace Core.Model
 {
     public class Instrument
     {
-        public string assetType;
-        public string cusip;
-        public string symbol;
-        public string description;
-        public string putCall;
+        public virtual string AssetType { get; init; }
+        public virtual string Cusip { get; init; }
+        public virtual string Symbol { get; init; }
+        public virtual string Description { get; init; }
+        public virtual string PutCall { get; init; }
+        public virtual string UnderlyingSymbol { get; init; }
+        public virtual float OptionMultiplier { get; init; }
     }
-}
-
-public class AssetType
-{
-    public const string EQUITY = nameof(EQUITY);
-    public const string OPTION = nameof(OPTION);
-}
-
-//enum AssetType
-//{
-//    EQUITY,
-//    OPTION,
-//    INDEX,
-//    MUTUAL_FUND,
-//    CASH_EQUIVALENT,
-//    FIXED_INCOME,
-//    CURRENCY
-//}
-
-enum PutCall
-{
-    PUT,
-    CALL
 }
