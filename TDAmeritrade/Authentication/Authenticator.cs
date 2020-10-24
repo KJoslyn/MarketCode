@@ -5,41 +5,50 @@ using System;
 
 namespace TDAmeritrade.Authentication
 {
-    internal static class Authenticator
+    internal class Authenticator
     {
-        static readonly int nMinutesBeforeAccessTokenUpdate = 1;
-        static readonly int nDaysBeforeRefreshTokenUpdate = 5;
+        private static readonly int nMinutesBeforeAccessTokenUpdate = 1;
+        private static readonly int nDaysBeforeRefreshTokenUpdate = 5;
 
-        public static void Authenticate()
+        public Authenticator(string consumerKey, string authInfoPath)
         {
-            AuthInfo _authInfo = AuthInfo.Read();
+            ConsumerKey = consumerKey;
+            AuthInfoPath = authInfoPath;
+        }
+
+        public string AuthInfoPath { get; }
+        public string ConsumerKey { get; }
+
+        public void Authenticate()
+        {
+            AuthInfo _authInfo = AuthInfo.Read(AuthInfoPath);
             if (AccessTokenNeedsUpdate(_authInfo) || RefreshTokenNeedsUpdate(_authInfo))
             {
                 AuthResponse response = RequestAuthTokens(_authInfo);
                 AuthInfo newAuthInfo = new AuthInfo(response, _authInfo);
-                AuthInfo.Write(newAuthInfo);
+                AuthInfo.Write(newAuthInfo, AuthInfoPath);
             }
         }
 
-        private static Boolean AccessTokenNeedsUpdate(AuthInfo authInfo)
+        private Boolean AccessTokenNeedsUpdate(AuthInfo authInfo)
         {
             return DateTime.Compare(authInfo.access_token_expires_at_date,
                 DateTime.Now.AddMinutes(nMinutesBeforeAccessTokenUpdate)) < 0;
         }
 
-        private static Boolean RefreshTokenNeedsUpdate(AuthInfo authInfo)
+        private Boolean RefreshTokenNeedsUpdate(AuthInfo authInfo)
         {
             return DateTime.Compare(authInfo.refresh_token_expires_at_date,
                 DateTime.Now.AddDays(nDaysBeforeRefreshTokenUpdate)) < 0;
         }
 
-        private static AuthResponse RequestAuthTokens(AuthInfo currentAuthInfo)
+        private AuthResponse RequestAuthTokens(AuthInfo currentAuthInfo)
         {
             RestClient authClient = new RestClient("https://api.tdameritrade.com/v1/oauth2/token");
             RestRequest request = new RestRequest(Method.POST);
             request.AddParameter("grant_type", "refresh_token");
             request.AddParameter("refresh_token", currentAuthInfo.refresh_token);
-            request.AddParameter("client_id", Config.ConsumerKey);
+            request.AddParameter("client_id", ConsumerKey);
 
             if (RefreshTokenNeedsUpdate(currentAuthInfo))
             {

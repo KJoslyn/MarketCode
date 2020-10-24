@@ -30,19 +30,19 @@ namespace TDAmeritrade.Authentication
             }
         }
 
-        public static AuthInfo Read()
+        public static AuthInfo Read(string authInfoPath)
         {
-            using (StreamReader r = new StreamReader(Config.AuthPath))
+            using (StreamReader r = new StreamReader(authInfoPath))
             {
                 string json = r.ReadToEnd();
                 return JsonConvert.DeserializeObject<AuthInfo>(json);
             }
         }
 
-        public static void Write(AuthInfo authInfo)
+        public static void Write(AuthInfo authInfo, string authInfoPath)
         {
             string authJson = JsonConvert.SerializeObject(authInfo);
-            System.IO.File.WriteAllText(Config.AuthPath, authJson);
+            System.IO.File.WriteAllText(authInfoPath, authJson);
         }
     }
 }

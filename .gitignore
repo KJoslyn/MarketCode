@@ -6,3 +6,9 @@ packages/
 PythonCode/
 td_state*
 Config.cs
+**/appsettings.json
+**/appsettings.development.json
+**/appsettings.staging.json
+**/appsettings.production.json
+**/.local-chromium
+**/screenshots

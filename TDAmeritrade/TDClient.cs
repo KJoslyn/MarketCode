@@ -12,14 +12,16 @@ namespace TDAmeritrade
 {
     public class TDClient : IBrokerClient
     {
-        public TDClient(string accountId)
+        public TDClient(TDAmeritradeConfig config)
         {
-            AccountClient = new RestClient("https://api.tdameritrade.com/v1/accounts/" + accountId);
+            AccountClient = new RestClient("https://api.tdameritrade.com/v1/accounts/" + config.AccountNumber);
+            Authenticator = new Authenticator(config.ConsumerKey, config.AuthInfoPath);
         }
 
         private RestClient AccountClient { get; }
-        private AuthInfo AuthInfo => AuthInfo.Read();
+        private AuthInfo AuthInfo => AuthInfo.Read(Authenticator.AuthInfoPath);
         private string AccessToken => AuthInfo.access_token;
+        private Authenticator Authenticator { get; }
 
         public static IRestResponse ExecuteRequest(RestClient client, RestRequest request)
         {

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using System;
 using System.IO;
+using TDAmeritrade;
 
 namespace LottoXService
 {
@@ -16,7 +17,7 @@ namespace LottoXService
         {
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
+                .AddJsonFile("appsettings.json", false, true)
                 .Build();
 
             Log.Logger = new LoggerConfiguration()
@@ -26,7 +27,7 @@ namespace LottoXService
             try
             {
                 Log.Information("LottoX Application Starting Up");
-                CreateHostBuilder(args).Build().Run();
+                CreateHostBuilder(args, configuration).Build().Run(); // TODO: RunAsync?
             }
             catch (Exception ex)
             {
@@ -39,12 +40,17 @@ namespace LottoXService
             }
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
+        public static IHostBuilder CreateHostBuilder(string[] args, IConfigurationRoot configuration)
+        {
+            return Host.CreateDefaultBuilder(args)
                 .UseSerilog()
                 .ConfigureServices((hostcontext, services) =>
                 {
-                    services.AddHostedService<Worker>();
+                    services.AddHostedService<Worker>()
+                        .AddOptions()
+                        .Configure<RagingBullConfig>(configuration.GetSection("RagingBull"))
+                        .Configure<TDAmeritradeConfig>(configuration.GetSection("TDAmeritrade"));
                 });
+        }
     }
 }
