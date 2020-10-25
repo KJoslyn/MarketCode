@@ -4,18 +4,28 @@ using RagingBull;
 using Serilog;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.IO;
+using AzureOCR;
+using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 #nullable enable
 
 namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig config) : base(config) { }
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig) : base(rbConfig, ocrConfig) { }
+
+        public async Task<IList<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
+        {
+            IList<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
+
+            return null;
+        }
 
         public override IList<Position> GetPositions()
         {
-            TryLogin().Wait();
-            TakeScreenshot().Wait();
+            //TryLogin().Wait();
+            //TakeScreenshot().Wait();
 
             return null;
             //throw new NotImplementedException();
@@ -29,10 +39,10 @@ namespace LottoXService
             ElementHandle? el = null;
             while (el == null && n < maxAttempts)
             {
+                el = await GetElement(await GetPage(), "//div[@id='jwPlayer']");
+                await Task.Delay(1000);
                 n++;
                 Log.Information("n = " + n);
-                await Task.Delay(1000);
-                el = await GetElement(await GetPage(), "//div[@id='jwPlayer']");
             }
             await page.ScreenshotAsync("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.png");
         }

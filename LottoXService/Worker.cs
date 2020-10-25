@@ -1,3 +1,4 @@
+using AzureOCR;
 using Core;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -13,16 +14,18 @@ namespace LottoXService
     {
         private readonly RagingBullConfig _ragingBullConfig;
         private readonly TDAmeritradeConfig _tdAmeritradeConfig;
+        private readonly OCRConfig _ocrConfig;
         private IBrokerClient BrokerClient { get; }
         private IPortfolioClient PortfolioClient { get; }
 
-        public Worker(IOptions<RagingBullConfig> rbOptions, IOptions<TDAmeritradeConfig> tdOptions)
+        public Worker(IOptions<RagingBullConfig> rbOptions, IOptions<TDAmeritradeConfig> tdOptions, IOptions<OCRConfig> ocrOptions)
         {
             _ragingBullConfig = rbOptions.Value;
             _tdAmeritradeConfig = tdOptions.Value;
+            _ocrConfig = ocrOptions.Value;
 
             BrokerClient = new TDClient(_tdAmeritradeConfig);
-            PortfolioClient = new LottoXClient(_ragingBullConfig);
+            PortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -31,10 +34,12 @@ namespace LottoXService
             // Get my positions
             // Make trades
 
+            await ((LottoXClient)PortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
+
+            //IList<Position> positions = BrokerClient.GetPositions();
             try
             {
-                PortfolioClient.GetPositions();
-                //IList<Position> positions = BrokerClient.GetPositions();
+                //PortfolioClient.GetPositions();
             }
             catch (Exception ex)
             {
@@ -42,7 +47,7 @@ namespace LottoXService
             }
             finally
             {
-                await PortfolioClient.Logout();
+                //await PortfolioClient.Logout();
             }
 
             while (!stoppingToken.IsCancellationRequested)

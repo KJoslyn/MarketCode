@@ -1,3 +1,4 @@
+using AzureOCR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -49,7 +50,8 @@ namespace LottoXService
                     services.AddHostedService<Worker>()
                         .AddOptions()
                         .Configure<RagingBullConfig>(configuration.GetSection("RagingBull"))
-                        .Configure<TDAmeritradeConfig>(configuration.GetSection("TDAmeritrade"));
+                        .Configure<TDAmeritradeConfig>(configuration.GetSection("TDAmeritrade"))
+                        .Configure<OCRConfig>(configuration.GetSection("AzureOCR"));
                 });
         }
     }

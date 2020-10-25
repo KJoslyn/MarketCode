@@ -6,23 +6,27 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AzureOCR;
+using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 #nullable enable
 
 namespace RagingBull
 {
     public abstract class RagingBullClient : IPortfolioClient
     {
-        public RagingBullClient(RagingBullConfig config)
+        public RagingBullClient(RagingBullConfig config, OCRConfig ocrConfig)
         {
             Email = config.Email;
             Password = config.Password;
             PortfolioUrl = config.PortfolioUrl;
+            OCRClient = new OCRClient(ocrConfig);
         }
 
         protected string Email { get; }
         protected string Password { get; }
         protected string PortfolioUrl { get; }
         protected Browser? Browser { get; private set; }
+        private OCRClient OCRClient { get; }
 
         public abstract IList<Position> GetPositions();
 
@@ -91,6 +95,12 @@ namespace RagingBull
                 return false;
             }
             return true;
+        }
+
+        // TODO: Make protected
+        public async Task<IList<Line>> ExtractLinesFromImage(string filePath, string writeToJsonPath = null)
+        {
+            return await OCRClient.ExtractLinesFromImage(filePath, writeToJsonPath);
         }
 
         protected async Task<ElementHandle?> GetElementWithContent(Page page, string elementType, string content)
