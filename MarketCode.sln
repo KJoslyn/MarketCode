@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "Core\Core.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LottoXService", "LottoXService\LottoXService.csproj", "{84D407C0-8931-4574-A4F1-EDABC1BC11DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RagingBull", "RagingBull\RagingBull.csproj", "{2ADA01E8-AF84-49D1-985A-F9B2A1ED136B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{84D407C0-8931-4574-A4F1-EDABC1BC11DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{84D407C0-8931-4574-A4F1-EDABC1BC11DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{84D407C0-8931-4574-A4F1-EDABC1BC11DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2ADA01E8-AF84-49D1-985A-F9B2A1ED136B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2ADA01E8-AF84-49D1-985A-F9B2A1ED136B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2ADA01E8-AF84-49D1-985A-F9B2A1ED136B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2ADA01E8-AF84-49D1-985A-F9B2A1ED136B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

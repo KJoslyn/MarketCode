@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\RagingBull\RagingBull.csproj" />
     <ProjectReference Include="..\TDAmeritrade\TDAmeritrade.csproj" />
   </ItemGroup>
 </Project>

@@ -6,6 +6,8 @@ namespace TDAmeritrade.Authentication
 {
     internal class AuthInfo
     {
+        // These property names are snake case because the python TDAm library creates them as such.
+        // Could use Json.NET's SnakeCaseNamingStrategy in DefaultContractResolver in the future.
         public string access_token;
         public string refresh_token;
         public DateTime access_token_expires_at_date;

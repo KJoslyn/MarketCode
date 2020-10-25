@@ -2,7 +2,6 @@
 using Core.Model;
 using Newtonsoft.Json;
 using RestSharp;
-using Serilog;
 using System.Collections.Generic;
 using System.Linq;
 using TDAmeritrade.Authentication;
