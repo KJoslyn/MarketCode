@@ -1,8 +1,11 @@
 using AzureOCR;
 using Core;
+using Core.Model;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TDAmeritrade;
@@ -37,6 +40,7 @@ namespace LottoXService
             await ((LottoXClient)PortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
 
             //IList<Position> positions = BrokerClient.GetPositions();
+            //Console.WriteLine(positions);
             try
             {
                 //PortfolioClient.GetPositions();
