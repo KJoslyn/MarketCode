@@ -3,6 +3,8 @@
     public static class AssetType
     {
         public const string EQUITY = nameof(EQUITY);
-        public const string OPTION = nameof(OPTION);
+        public const string CALL = nameof(CALL);
+        public const string PUT = nameof(PUT);
+        public const string CASH = nameof(CASH);
     }
 }

@@ -40,7 +40,7 @@ namespace TDAmeritrade
             request.AddParameter("fields", "positions");
             IRestResponse response = ExecuteRequest(AccountClient, request);
             Account account = JsonConvert.DeserializeObject<Account>(response.Content);
-            return account.SecuritiesAccount.Positions.ToList();
+            return account.SecuritiesAccount.Positions.Cast<Position>().ToList();
         }
 
         private RestRequest CreateRequest(Method method)

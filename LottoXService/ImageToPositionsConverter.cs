@@ -52,9 +52,7 @@ namespace LottoXService
                 string normalized = ReplaceFirst(joined, " ", "_");
                 string[] parts = normalized.Split(" ");
 
-                Instrument instrument = Instrument.CreateOptionFromSymbol(parts[0]); // TODO: try-catch?
-                float marketValue = float.Parse(parts[6].Substring(1)); // Take '$' off front
-                Position position = new Position(0, float.Parse(parts[3]), float.Parse(parts[1]), instrument, marketValue);
+                Position position = new Position(parts[0], float.Parse(parts[1]), float.Parse(parts[3]));
                 positions.Add(position);
             }
             return positions;

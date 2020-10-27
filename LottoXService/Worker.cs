@@ -46,16 +46,12 @@ namespace LottoXService
             // Get LottoX portfolio positions
             // Get my positions
             // Make trades
-            await ((LottoXClient)PortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
+            await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
 
             //IList<Position> positions = BrokerClient.GetPositions();
-<<<<<<< HEAD
-            //Console.WriteLine(positions);
-=======
 
             
 
->>>>>>> 5292d34... squash
             try
             {
                 //PortfolioClient.GetPositions();
