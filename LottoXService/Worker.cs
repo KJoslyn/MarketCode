@@ -1,6 +1,7 @@
 using AzureOCR;
 using Core;
 using Core.Model;
+using Database;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
@@ -18,29 +19,43 @@ namespace LottoXService
         private readonly RagingBullConfig _ragingBullConfig;
         private readonly TDAmeritradeConfig _tdAmeritradeConfig;
         private readonly OCRConfig _ocrConfig;
-        private IBrokerClient BrokerClient { get; }
-        private IPortfolioClient PortfolioClient { get; }
+        private readonly DatabaseConfig _dbConfig;
 
-        public Worker(IOptions<RagingBullConfig> rbOptions, IOptions<TDAmeritradeConfig> tdOptions, IOptions<OCRConfig> ocrOptions)
+        public Worker(IOptions<RagingBullConfig> rbOptions, IOptions<TDAmeritradeConfig> tdOptions, IOptions<OCRConfig> ocrOptions, IOptions<DatabaseConfig> dbOptions)
         {
             _ragingBullConfig = rbOptions.Value;
             _tdAmeritradeConfig = tdOptions.Value;
             _ocrConfig = ocrOptions.Value;
+            _dbConfig = dbOptions.Value;
 
-            BrokerClient = new TDClient(_tdAmeritradeConfig);
-            PortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig);
+            if (_dbConfig.UsePaperTrade)
+            {
+                BrokerClient = new PaperTradeBrokerClient(_dbConfig.PaperTradeDatabasePath);
+            } else
+            {
+                BrokerClient = new TDClient(_tdAmeritradeConfig);
+            }
+            LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig);
         }
+
+        private IBrokerClient BrokerClient { get; }
+        private ILivePortfolioClient LivePortfolioClient { get; }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             // Get LottoX portfolio positions
             // Get my positions
             // Make trades
-
             await ((LottoXClient)PortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
 
             //IList<Position> positions = BrokerClient.GetPositions();
+<<<<<<< HEAD
             //Console.WriteLine(positions);
+=======
+
+            
+
+>>>>>>> 5292d34... squash
             try
             {
                 //PortfolioClient.GetPositions();

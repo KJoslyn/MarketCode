@@ -16,5 +16,6 @@
         public virtual float LongQuantity { get; init; }
         public virtual Instrument Instrument { get; init; }
         public virtual float MarketValue { get; init; }
+        public string Symbol { get => Instrument.Symbol; }
     }
 }

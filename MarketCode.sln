@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RagingBull", "RagingBull\Ra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureOCR", "AzureOCR\AzureOCR.csproj", "{F91C3902-BF71-4676-B5CA-7299ED9077D2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Database.csproj", "{732B2701-A835-42EB-80CE-3AC128671B28}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{F91C3902-BF71-4676-B5CA-7299ED9077D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F91C3902-BF71-4676-B5CA-7299ED9077D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F91C3902-BF71-4676-B5CA-7299ED9077D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{732B2701-A835-42EB-80CE-3AC128671B28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{732B2701-A835-42EB-80CE-3AC128671B28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{732B2701-A835-42EB-80CE-3AC128671B28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{732B2701-A835-42EB-80CE-3AC128671B28}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Core
 {
-    public interface IPortfolioClient
+    public interface ILivePortfolioClient
     {
         public IList<Position> GetPositions();
 

@@ -12,3 +12,4 @@ Config.cs
 **/appsettings.production.json
 **/.local-chromium
 **/screenshots
+LottoXService/db

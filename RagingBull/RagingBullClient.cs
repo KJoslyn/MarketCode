@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace RagingBull
 {
-    public abstract class RagingBullClient : IPortfolioClient
+    public abstract class RagingBullClient : ILivePortfolioClient
     {
         public RagingBullClient(RagingBullConfig config)
         {
