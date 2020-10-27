@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AzureOCR\AzureOCR.csproj" />
     <ProjectReference Include="..\RagingBull\RagingBull.csproj" />
     <ProjectReference Include="..\TDAmeritrade\TDAmeritrade.csproj" />
   </ItemGroup>

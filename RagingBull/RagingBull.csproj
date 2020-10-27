@@ -10,7 +10,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AzureOCR\AzureOCR.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 

@@ -17,61 +17,18 @@ namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig) : base(rbConfig, ocrConfig) { }
-
-        public async Task<IList<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
-        {
-            List<Position> positions = new List<Position>();
-
-            IList<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
-
-            // TODO: Ensure the order of the columns
-            // Symbol, Quantity, Last, Averag,                Open P/L (Acct), Open P/L %, Market Value
-
-            Regex symbolRegex = new Regex(@"^[A-Z]{1,5} \d{6}[CP]\d+");
-
-            List<int> symbolIndices = lines
-                .Select((line, index) => new { Line = line, Index = index })
-                .Where(obj => symbolRegex.IsMatch(obj.Line.Text))
-                .Select(obj => obj.Index).ToList();
-
-            List<string> lineTexts = lines.Select((line, index) => line.Text).ToList();
-
-            if (symbolIndices.Count == 0)
-            {
-                return positions;
-            }
-
-            int numColumns = 7;
-            for (int i = 0; i < symbolIndices.Count; i++)
-            {
-                int numLinesInThisSymbol = symbolIndices.Count > i + 1
-                    ? symbolIndices[i + 1] - symbolIndices[i]
-                    : Math.Min(numColumns, lines.Count - symbolIndices[i]);
-
-                List<string> subList = lineTexts.GetRange(symbolIndices[i], numLinesInThisSymbol);
-
-                string joined = string.Join(" ", subList);
-                string normalized = ReplaceFirst(joined, " ", "_");
-                string[] parts = normalized.Split(" ");
-
-                Instrument instrument = Instrument.CreateOptionFromSymbol(parts[0]); // TODO: try-catch?
-                float marketValue = float.Parse(parts[6].Substring(1)); // Take '$' off front
-                Position position = new Position(0, float.Parse(parts[3]), float.Parse(parts[1]), instrument, marketValue);
-                positions.Add(position);
-            }
-
-            return positions;
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig) : base(rbConfig) 
+        { 
+            ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
         }
 
-        private string ReplaceFirst(string text, string search, string replace)
+        private ImageToPositionsConverter ImageToPositionsConverter { get; }
+
+        // TODO: Remove eventually
+        public async Task<IList<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
         {
-            int pos = text.IndexOf(search);
-            if (pos < 0)
-            {
-                return text;
-            }
-            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+            IList<Position> positions = await ImageToPositionsConverter.GetPositionsFromImage(filePath, writeToJsonPath);
+            return positions;
         }
 
         public override IList<Position> GetPositions()
@@ -82,6 +39,7 @@ namespace LottoXService
             return null;
             //throw new NotImplementedException();
         }
+
 
         private async Task TakeScreenshot()
         {
