@@ -1,4 +1,6 @@
-﻿namespace Core.Model
+﻿using System;
+
+namespace Core.Model
 {
     public class PositionDelta
     {
@@ -9,6 +11,7 @@
             Quantity = quantity;
             Price = price;
             Percent = percent;
+            Date = DateTime.Now;
         }
 
         public string DeltaType { get; }
@@ -21,5 +24,6 @@
         // "ADD": Percent is amount that position was increased.
         // "SELL": Percent is amount of position that was sold.
         public float Percent { get; }
+        public DateTime Date { get; init; }
     }
 }
