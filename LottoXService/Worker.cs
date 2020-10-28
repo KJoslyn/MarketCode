@@ -45,22 +45,26 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            LivePortfolioClient.GetPositions();
+
             // Get LottoX portfolio positions
             // Get my positions
             // Make trades
-            IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
+            //IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
 
-            IList<Position> oldPositions = LottoxPositionsDB.GetPositions();
+            //IList<Position> oldPositions = LottoxPositionsDB.GetPositions();
 
-            IList<PositionDelta> deltas = LottoxPositionsDB.ComputePositionDeltas(livePositions);
-            LottoxPositionsDB.UpdatePositionsAndDeltas(livePositions, deltas);
-            IList<Position> updatedPositions = LottoxPositionsDB.GetPositions();
+            //IList<PositionDelta> deltas = LottoxPositionsDB.ComputePositionDeltas(livePositions);
+            //LottoxPositionsDB.UpdatePositionsAndDeltas(livePositions, deltas);
+            //IList<Position> updatedPositions = LottoxPositionsDB.GetPositions();
 
-            Console.WriteLine(oldPositions);
-            Console.WriteLine(updatedPositions);
+            //Console.WriteLine(oldPositions);
+            //Console.WriteLine(updatedPositions);
+
+
+
+
             //IList<Position> positions = BrokerClient.GetPositions();
-
-            
 
             try
             {

@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Collections;
 using System;
+using PuppeteerSharp.Input;
 #nullable enable
 
 namespace LottoXService
@@ -31,30 +32,83 @@ namespace LottoXService
             return positions;
         }
 
+        public override async Task<bool> Logout()
+        {
+            try
+            {
+                await DoubleClickPortfolio();
+            } catch (Exception ex)
+            {
+                Log.Fatal(ex, "Could not find live portfolio element when logging out");
+                return false;
+            }
+            return await base.Logout();
+        }
+
+        protected override async Task<bool> TryLogin()
+        {
+            if (await IsLoggedIn()) return true;
+
+            bool baseResult = await base.TryLogin();
+            if (!baseResult) return false;
+
+            try
+            {
+                await Task.Delay(3000);
+                await DoubleClickPortfolio();
+            } catch (Exception ex)
+            {
+                Log.Fatal(ex, "Could not find live portfolio element when logging in");
+                return false;
+            }
+            return true;
+        }
+
         public override IList<Position> GetPositions()
         {
-            //TryLogin().Wait();
-            //TakeScreenshot().Wait();
+            TryLogin().Wait();
+            Task.Delay(3000).Wait();
+            TakeScreenshot("1.png").Wait();
+            Logout().Wait();
 
             return null;
             //throw new NotImplementedException();
         }
 
-
-        private async Task TakeScreenshot()
+        private async Task DoubleClickPortfolio()
         {
             int maxAttempts = 5;
             int n = 0;
-            Page page = await GetPage();
-            ElementHandle? el = null;
-            while (el == null && n < maxAttempts)
+            ElementHandle? el;
+            do
             {
                 el = await GetElement(await GetPage(), "//div[@id='jwPlayer']");
-                await Task.Delay(1000);
-                n++;
-                Log.Information("n = " + n);
+                if (el == null)
+                {
+                    await Task.Delay(1000);
+                    n++;
+                    Log.Information("n = " + n);
+                }
             }
-            await page.ScreenshotAsync("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.png");
+            while (el == null && n < maxAttempts);
+
+            if (el == null)
+            {
+                throw new RagingBullException("Could not find live portfolio on page");
+            }
+            await Task.Delay(3000);
+            await el.ClickAsync(new ClickOptions { ClickCount = 1, Delay = 10 });
+            await el.ClickAsync(new ClickOptions { ClickCount = 2, Delay = 10 });
+
+            await Task.Delay(1000);
+            //await el.TapAsync();
+            //await el.TapAsync();
+        }
+
+        private async Task TakeScreenshot(string filename)
+        {
+            Page page = await GetPage();
+            await page.ScreenshotAsync("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/" + filename);
         }
     }
 }

@@ -17,17 +17,20 @@ namespace RagingBull
             Email = config.Email;
             Password = config.Password;
             PortfolioUrl = config.PortfolioUrl;
+            ChromePath = config.ChromePath;
         }
 
         protected string Email { get; }
         protected string Password { get; }
         protected string PortfolioUrl { get; }
+        protected string ChromePath { get; }
         protected Browser? Browser { get; private set; }
 
         public abstract IList<Position> GetPositions();
 
-        public async Task<bool> Logout()
+        public virtual async Task<bool> Logout()
         {
+            Log.Information("Logging out of RagingBull");
             try
             {
                 Page page = await GetPage();
@@ -55,7 +58,7 @@ namespace RagingBull
             return page.Url == PortfolioUrl;
         }
 
-        protected async Task<bool> TryLogin()
+        protected virtual async Task<bool> TryLogin()
         {
             if (await IsLoggedIn()) return true;
 
@@ -131,10 +134,11 @@ namespace RagingBull
         private async Task<Browser> StartBrowserAndCreatePage()
         {
             // This only downloads the browser version if it is has not been downloaded already
-            await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
+            //await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
             Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
-                Headless = true
+                Headless = true,
+                ExecutablePath = ChromePath
             });
             await browser.NewPageAsync();
             return browser;

@@ -17,6 +17,7 @@ namespace Core.Model
         public string DeltaType { get; }
         public string Symbol { get; }
         public float Quantity { get; }
+        // TODO: Add sell price!!! (Get quote)
         public float Price { get; }
 
         // "Percent" depends on DeltaType. Value between 0 and 1.
