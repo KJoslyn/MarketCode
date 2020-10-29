@@ -1,6 +1,6 @@
-﻿namespace Database
+﻿namespace LottoXService
 {
-    public class DatabaseConfig
+    public class GeneralConfig
     {
         public string LottoxDatabasePath { get; init; }
         public string PaperTradeDatabasePath { get; init; }

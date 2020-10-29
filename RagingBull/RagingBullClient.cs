@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace RagingBull
 {
-    public abstract class RagingBullClient : ILivePortfolioClient
+    public abstract class RagingBullClient : LivePortfolioClient
     {
-        public RagingBullClient(RagingBullConfig config)
+        public RagingBullClient(RagingBullConfig config, IPositionDatabase positionDB) : base(positionDB)
         {
             Email = config.Email;
             Password = config.Password;
@@ -26,9 +26,7 @@ namespace RagingBull
         protected string ChromePath { get; }
         protected Browser? Browser { get; private set; }
 
-        public abstract Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas();
-
-        public virtual async Task<bool> Logout()
+        public override async Task<bool> Logout()
         {
             Log.Information("Logging out of RagingBull");
             try

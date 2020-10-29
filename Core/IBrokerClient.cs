@@ -5,6 +5,6 @@ namespace Core
 {
     public interface IBrokerClient
     {
-        IList<Position> GetPositions();
+        public IList<Position> GetPositions();
     }
 }

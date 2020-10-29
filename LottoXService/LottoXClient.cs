@@ -1,4 +1,5 @@
 ﻿using AzureOCR;
+using Core;
 using Core.Model;
 using PuppeteerSharp;
 using RagingBull;
@@ -10,7 +11,7 @@ namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig) : base(rbConfig)
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, IPositionDatabase positionDB) : base(rbConfig, positionDB)
         {
             ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
         }
@@ -24,7 +25,7 @@ namespace LottoXService
             return positions;
         }
 
-        public override async Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas()
+        protected override async Task<IList<Position>> GetLivePositions()
         {
             await TryLogin();
             await Task.Delay(6000);
@@ -35,7 +36,7 @@ namespace LottoXService
             await Logout();
 
             //return positions;
-            return (null, null);
+            return null;
             //throw new NotImplementedException();
         }
 

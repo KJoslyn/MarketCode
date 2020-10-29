@@ -1,30 +1,38 @@
 ﻿using Core.Model;
 using Core.Model.Constants;
-using LiteDB;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Linq;
-#nullable enable
 
-namespace Database
+namespace Core
 {
-    public class PositionDB
+    public abstract class LivePortfolioClient
     {
-        protected LiteDatabase _db;
-
-        public PositionDB(string dbPath)
+        public LivePortfolioClient(IPositionDatabase positionDB)
         {
-            _db = new LiteDatabase(dbPath);
+            PositionDB = positionDB;
         }
 
-        public IList<Position> GetPositions()
+        private IPositionDatabase PositionDB { get; init; }
+
+        public abstract Task<bool> Logout();
+
+        // This does not update the database, but the method is not public.
+        protected abstract Task<IList<Position>> GetLivePositions();
+
+        // This does update the database so that the deltas remain accurate.
+        public async Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas()
         {
-            return _db.GetCollection<Position>().FindAll().ToList();
+            IList<Position> livePositions = await GetLivePositions();
+            IList<PositionDelta> deltas = ComputePositionDeltas(livePositions);
+            PositionDB.UpdatePositionsAndDeltas(livePositions, deltas);
+            return (livePositions, deltas);
         }
 
-        public IList<PositionDelta> ComputePositionDeltas(IList<Position> livePositions)
+        private IList<PositionDelta> ComputePositionDeltas(IList<Position> livePositions)
         {
             IList<PositionDelta> deltas = new List<PositionDelta>();
-            IList<Position> oldPositions = GetPositions();
+            IList<Position> oldPositions = PositionDB.GetStoredPositions();
 
             foreach (Position livePos in livePositions)
             {
@@ -81,16 +89,6 @@ namespace Database
                 }
             }
             return deltas;
-        }
-
-        public void UpdatePositionsAndDeltas(IList<Position> livePositions, IList<PositionDelta> positionDeltas)
-        {
-            if (positionDeltas.Count > 0)
-            {
-                _db.GetCollection<Position>().DeleteAll();
-                _db.GetCollection<Position>().InsertBulk(livePositions);
-                _db.GetCollection<PositionDelta>().InsertBulk(positionDeltas);
-            }
         }
     }
 }

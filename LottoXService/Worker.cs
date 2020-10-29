@@ -1,9 +1,11 @@
 using AzureOCR;
 using Core;
+using Core.Model;
 using Database;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TDAmeritrade;
@@ -16,34 +18,35 @@ namespace LottoXService
         private readonly RagingBullConfig _ragingBullConfig;
         private readonly TDAmeritradeConfig _tdAmeritradeConfig;
         private readonly OCRConfig _ocrConfig;
-        private readonly DatabaseConfig _dbConfig;
+        private readonly GeneralConfig _generalConfig;
 
-        public Worker(IOptions<RagingBullConfig> rbOptions, IOptions<TDAmeritradeConfig> tdOptions, IOptions<OCRConfig> ocrOptions, IOptions<DatabaseConfig> dbOptions)
+        public Worker(IOptions<RagingBullConfig> rbOptions, IOptions<TDAmeritradeConfig> tdOptions, IOptions<OCRConfig> ocrOptions, IOptions<GeneralConfig> generalOptions)
         {
             _ragingBullConfig = rbOptions.Value;
             _tdAmeritradeConfig = tdOptions.Value;
             _ocrConfig = ocrOptions.Value;
-            _dbConfig = dbOptions.Value;
+            _generalConfig = generalOptions.Value;
 
-            if (_dbConfig.UsePaperTrade)
+            PositionDatabase lottoxDatabase = new PositionDatabase(_generalConfig.LottoxDatabasePath);
+            LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
+
+            if (_generalConfig.UsePaperTrade)
             {
-                BrokerClient = new PaperTradeBrokerClient(_dbConfig.PaperTradeDatabasePath);
+                PositionDatabase paperDatabase = new PositionDatabase(_generalConfig.PaperTradeDatabasePath);
+                BrokerClient = new PaperTradeBrokerClient(paperDatabase);
             }
             else
             {
                 BrokerClient = new TDClient(_tdAmeritradeConfig);
             }
-            LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig);
-            LottoxPositionsDB = new PositionDB(_dbConfig.LottoxDatabasePath);
         }
 
         private IBrokerClient BrokerClient { get; }
-        private ILivePortfolioClient LivePortfolioClient { get; }
-        private PositionDB LottoxPositionsDB { get; }
+        private LivePortfolioClient LivePortfolioClient { get; }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            LivePortfolioClient.GetPositions();
+            (IList<Position> livePositions, IList<PositionDelta> deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
 
             // Get LottoX portfolio positions
             // Get my positions
@@ -58,9 +61,6 @@ namespace LottoXService
 
             //Console.WriteLine(oldPositions);
             //Console.WriteLine(updatedPositions);
-
-
-
 
             //IList<Position> positions = BrokerClient.GetPositions();
 
