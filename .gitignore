@@ -13,3 +13,4 @@ Config.cs
 **/.local-chromium
 **/screenshots
 LottoXService/db
+LottoXService/debug.log

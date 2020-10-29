@@ -16,7 +16,7 @@ namespace Core.Model
             AveragePrice = averagePrice;
         }
 
-        public Position() 
+        public Position()
         {
             DateUpdated = DateTime.Now;
         }
@@ -32,7 +32,7 @@ namespace Core.Model
             {
                 if (_callRegex.IsMatch(Symbol))
                 {
-                    return AssetType.CALL; 
+                    return AssetType.CALL;
                 }
                 else if (_putRegex.IsMatch(Symbol))
                 {

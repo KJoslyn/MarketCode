@@ -1,11 +1,8 @@
 ﻿using Core.Model;
 using Core.Model.Constants;
 using LiteDB;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 #nullable enable
 
 namespace Database
@@ -50,19 +47,19 @@ namespace Database
                 if (livePos == null)
                 {
                     delta = new PositionDelta(
-                        DeltaType.SELL, 
-                        oldPos.Symbol, 
-                        oldPos.LongQuantity, 
+                        DeltaType.SELL,
+                        oldPos.Symbol,
+                        oldPos.LongQuantity,
                         0, // Sell price is unknown
                         1);
-                } 
+                }
                 else if (livePos.LongQuantity > oldPos.LongQuantity)
                 {
                     float deltaContracts = livePos.LongQuantity - oldPos.LongQuantity;
                     float addPrice = (livePos.AveragePrice * livePos.LongQuantity - oldPos.AveragePrice * oldPos.LongQuantity) / deltaContracts;
                     delta = new PositionDelta(
-                        DeltaType.ADD, 
-                        oldPos.Symbol, 
+                        DeltaType.ADD,
+                        oldPos.Symbol,
                         deltaContracts,
                         addPrice,
                         deltaContracts / oldPos.LongQuantity);

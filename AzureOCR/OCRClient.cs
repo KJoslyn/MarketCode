@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
+﻿using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using System.Threading.Tasks;
-using System.IO;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Threading;
-using System.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace AzureOCR
 {
@@ -18,20 +15,22 @@ namespace AzureOCR
         public OCRClient(OCRConfig config)
         {
             _client = new ComputerVisionClient(new ApiKeyServiceClientCredentials(config.SubscriptionKey))
-              { Endpoint = config.Endpoint };
+            { Endpoint = config.Endpoint };
         }
 
         public async Task<IList<Line>> ExtractLinesFromImage(string filePath, string writeToJsonPath = null)
         {
             IList<ReadResult> textResults;
 
-            if (filePath.EndsWith("json")) {
+            if (filePath.EndsWith("json"))
+            {
                 using (StreamReader r = new StreamReader(filePath))
                 {
                     string json = r.ReadToEnd();
                     textResults = JsonConvert.DeserializeObject<IList<ReadResult>>(json);
                 }
-            } else
+            }
+            else
             {
                 ReadInStreamHeaders textHeaders = await _client.ReadInStreamAsync(File.OpenRead(filePath), language: "en");
                 string operationLocation = textHeaders.OperationLocation;

@@ -1,25 +1,17 @@
-﻿using Core.Model;
+﻿using AzureOCR;
+using Core.Model;
 using PuppeteerSharp;
 using RagingBull;
-using Serilog;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.IO;
-using AzureOCR;
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Collections;
-using System;
-using PuppeteerSharp.Input;
 #nullable enable
 
 namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig) : base(rbConfig) 
-        { 
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig) : base(rbConfig)
+        {
             ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
         }
 
@@ -32,7 +24,7 @@ namespace LottoXService
             return positions;
         }
 
-        public override async Task<IList<Position>> GetPositions()
+        public override async Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas()
         {
             await TryLogin();
             await Task.Delay(6000);
@@ -43,7 +35,7 @@ namespace LottoXService
             await Logout();
 
             //return positions;
-            return null;
+            return (null, null);
             //throw new NotImplementedException();
         }
 

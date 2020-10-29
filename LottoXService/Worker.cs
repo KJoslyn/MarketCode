@@ -1,12 +1,9 @@
 using AzureOCR;
 using Core;
-using Core.Model;
 using Database;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TDAmeritrade;
@@ -31,7 +28,8 @@ namespace LottoXService
             if (_dbConfig.UsePaperTrade)
             {
                 BrokerClient = new PaperTradeBrokerClient(_dbConfig.PaperTradeDatabasePath);
-            } else
+            }
+            else
             {
                 BrokerClient = new TDClient(_tdAmeritradeConfig);
             }

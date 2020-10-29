@@ -26,7 +26,7 @@ namespace RagingBull
         protected string ChromePath { get; }
         protected Browser? Browser { get; private set; }
 
-        public abstract Task<IList<Position>> GetPositions();
+        public abstract Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas();
 
         public virtual async Task<bool> Logout()
         {

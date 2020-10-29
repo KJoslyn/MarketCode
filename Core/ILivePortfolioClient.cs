@@ -6,7 +6,7 @@ namespace Core
 {
     public interface ILivePortfolioClient
     {
-        public Task<IList<Position>> GetPositions();
+        public Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas();
 
         public Task<bool> Logout();
     }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Core;
-using Core.Model;
-using LiteDB;
+﻿using Core;
 
 namespace Database
 {

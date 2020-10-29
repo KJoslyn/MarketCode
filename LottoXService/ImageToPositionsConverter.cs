@@ -1,12 +1,11 @@
 ﻿using AzureOCR;
+using Core.Model;
+using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Core.Model;
-using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace LottoXService
 {
