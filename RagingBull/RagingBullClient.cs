@@ -26,7 +26,7 @@ namespace RagingBull
         protected string ChromePath { get; }
         protected Browser? Browser { get; private set; }
 
-        public abstract IList<Position> GetPositions();
+        public abstract Task<IList<Position>> GetPositions();
 
         public virtual async Task<bool> Logout()
         {
@@ -64,8 +64,7 @@ namespace RagingBull
 
             if (Browser == null)
             {
-                Log.Information("Starting headless browser");
-                Browser = await StartBrowserAndCreatePage();
+                Browser = await StartBrowser();
             }
             Page page = await GetPage();
 
@@ -131,16 +130,17 @@ namespace RagingBull
             return pages[0];
         }
 
-        private async Task<Browser> StartBrowserAndCreatePage()
+        private async Task<Browser> StartBrowser()
         {
+            Log.Information("Starting headless browser");
             // This only downloads the browser version if it is has not been downloaded already
             //await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultRevision);
             Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
                 Headless = true,
-                ExecutablePath = ChromePath
+                ExecutablePath = ChromePath,
+                DefaultViewport = new ViewPortOptions { Width = 2560, Height = 1440 }
             });
-            await browser.NewPageAsync();
             return browser;
         }
     }
