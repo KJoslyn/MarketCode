@@ -9,12 +9,12 @@ namespace Core
 {
     public class PaperTradeBrokerClient : IBrokerClient
     {
-        public PaperTradeBrokerClient(IPositionDatabase positionDB)
+        public PaperTradeBrokerClient(PositionDatabase positionDB)
         {
             PositionDB = positionDB;
         }
 
-        private IPositionDatabase PositionDB { get; init; }
+        private PositionDatabase PositionDB { get; init; }
 
         public IList<Position> GetPositions()
         {

@@ -1,6 +1,5 @@
 ﻿using Core;
 using Core.Model;
-using Core.Model.Constants;
 using LiteDB;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,26 +7,26 @@ using System.Linq;
 
 namespace Database
 {
-    public class PositionDatabase : IPositionDatabase
+    public class LitePositionDatabase : PositionDatabase
     {
         protected LiteDatabase _db;
 
-        public PositionDatabase(string dbPath)
+        public LitePositionDatabase(string dbPath)
         {
             _db = new LiteDatabase(dbPath);
         }
 
-        public IList<Position> GetStoredPositions()
+        public override IList<Position> GetStoredPositions()
         {
             return _db.GetCollection<Position>().FindAll().ToList();
         }
 
-        public IList<PositionDelta> GetStoredDeltas()
+        public override IList<PositionDelta> GetStoredDeltas()
         {
             return _db.GetCollection<PositionDelta>().FindAll().ToList();
         }
 
-        public void UpdatePositionsAndDeltas(IList<Position> livePositions, IList<PositionDelta> positionDeltas)
+        public override void UpdatePositionsAndDeltas(IList<Position> livePositions, IList<PositionDelta> positionDeltas)
         {
             if (positionDeltas.Count > 0)
             {

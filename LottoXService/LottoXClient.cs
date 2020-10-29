@@ -11,7 +11,7 @@ namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, IPositionDatabase positionDB) : base(rbConfig, positionDB)
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PositionDatabase positionDB) : base(rbConfig, positionDB)
         {
             ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
         }

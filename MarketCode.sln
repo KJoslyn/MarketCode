@@ -11,9 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LottoXService", "LottoXServ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RagingBull", "RagingBull\RagingBull.csproj", "{2ADA01E8-AF84-49D1-985A-F9B2A1ED136B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureOCR", "AzureOCR\AzureOCR.csproj", "{F91C3902-BF71-4676-B5CA-7299ED9077D2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureOCR", "AzureOCR\AzureOCR.csproj", "{F91C3902-BF71-4676-B5CA-7299ED9077D2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database", "Database\Database.csproj", "{732B2701-A835-42EB-80CE-3AC128671B28}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiteDatabase", "Database\LiteDatabase.csproj", "{732B2701-A835-42EB-80CE-3AC128671B28}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

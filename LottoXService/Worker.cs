@@ -27,12 +27,12 @@ namespace LottoXService
             _ocrConfig = ocrOptions.Value;
             _generalConfig = generalOptions.Value;
 
-            PositionDatabase lottoxDatabase = new PositionDatabase(_generalConfig.LottoxDatabasePath);
+            PositionDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
 
             if (_generalConfig.UsePaperTrade)
             {
-                PositionDatabase paperDatabase = new PositionDatabase(_generalConfig.PaperTradeDatabasePath);
+                PositionDatabase paperDatabase = new LitePositionDatabase(_generalConfig.PaperTradeDatabasePath);
                 BrokerClient = new PaperTradeBrokerClient(paperDatabase);
             }
             else
