@@ -26,6 +26,5 @@ namespace Core
             PositionDB.UpdatePositionsAndDeltas(livePositions, deltas);
             return (livePositions, deltas);
         }
-
     }
 }

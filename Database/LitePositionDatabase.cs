@@ -35,5 +35,20 @@ namespace Database
                 _db.GetCollection<PositionDelta>().InsertBulk(positionDeltas);
             }
         }
+
+        public override void InsertDelta(PositionDelta delta)
+        {
+            _db.GetCollection<PositionDelta>().Insert(delta);
+        }
+
+        public override void InsertPosition(Position position)
+        {
+            _db.GetCollection<Position>().Insert(position);
+        }
+
+        public override void DeletePosition(Position position)
+        {
+            _db.GetCollection<Position>().Delete(position.Id);
+        }
     }
 }

@@ -2,6 +2,7 @@
 using Core.Model.Constants;
 using System.Collections.Generic;
 using System.Linq;
+#nullable enable
 
 namespace Core
 {
@@ -12,6 +13,12 @@ namespace Core
         public abstract IList<PositionDelta> GetStoredDeltas();
 
         public abstract void UpdatePositionsAndDeltas(IList<Position> livePositions, IList<PositionDelta> positionDeltas);
+
+        public abstract void InsertDelta(PositionDelta delta);
+
+        public abstract void InsertPosition(Position position);
+
+        public abstract void DeletePosition(Position position);
 
         public IList<PositionDelta> ComputePositionDeltas(IList<Position> livePositions)
         {

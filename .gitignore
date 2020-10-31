@@ -14,3 +14,4 @@ Config.cs
 **/screenshots
 LottoXService/db
 LottoXService/debug.log
+LottoXService/deltas.json
