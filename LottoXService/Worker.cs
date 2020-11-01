@@ -4,8 +4,11 @@ using Core.Model;
 using Database;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using TDAmeritrade;
@@ -54,23 +57,63 @@ namespace LottoXService
         private LivePortfolioClient LivePortfolioClient { get; }
         private OrderManager OrderManager { get; }
 
+        class DeltaList
+        {
+            public IList<PositionDelta> Deltas { get; set; }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            (IList<Position> livePositions, IList<PositionDelta> deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+            //IList<Position> positions = BrokerClient.GetPositions();
 
-            foreach (PositionDelta delta in deltas)
+            //string symbol = "SFIX_201120C35";
+            //string symbol = "SFIX";
+            //OptionQuote quote = BrokerClient.GetQuote(symbol);
+
+            //Log.Information("Quote: {@Quote}", quote);
+
+            try
             {
-                Order? order = OrderManager.DecideOrder(delta);
-                if (order != null)
-                {
-                    BrokerClient.PlaceOrder(order);
-                }
+                //(IList<Position> livePositions, IList<PositionDelta> deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+
+                IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
+                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json",
+                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json");
+
+                Console.WriteLine(livePositions);
+
+                IList<Position> offlinePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
+                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json",
+                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json");
+
+                Console.WriteLine(offlinePositions);
+
+            } catch (InvalidPortfolioStateException ex)
+            {
+                // TODO: Email/text notification???
+                Console.WriteLine("Invalid portfolio state");
             }
 
-            // Get LottoX portfolio positions
-            // Get my positions
-            // Make trades
-            //IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/Pictures/Screenshots/LottoXCropped.json");
+            //DeltaList list;
+            //using (StreamReader r = new StreamReader("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/deltas.json"))
+            //{
+            //    string json = r.ReadToEnd();
+            //    list = JsonConvert.DeserializeObject<DeltaList>(json);
+            //}
+            //IList<PositionDelta> deltas = list.Deltas;
+
+            //foreach (PositionDelta delta in deltas)
+            //{
+            //    Order? order = OrderManager.DecideOrder(delta);
+            //    if (order != null)
+            //    {
+            //        BrokerClient.PlaceOrder(order, delta.Price);
+            //    }
+            //}
+
+            //IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
+            //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.png",
+            //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json");
 
             //IList<Position> oldPositions = LottoxPositionsDB.GetPositions();
 

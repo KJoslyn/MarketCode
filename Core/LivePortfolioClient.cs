@@ -19,6 +19,8 @@ namespace Core
         protected abstract Task<IList<Position>> GetLivePositions();
 
         // This does update the database so that the deltas remain accurate.
+        // May throw InvalidPortfolioStateException if the portfolio is not in a valid state
+        // (The portfolio may be offline, or its format may have changed.)
         public async Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas()
         {
             IList<Position> livePositions = await GetLivePositions();

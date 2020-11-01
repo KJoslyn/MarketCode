@@ -29,7 +29,7 @@ namespace LottoXService
         {
             await TryLogin();
             await Task.Delay(6000);
-            await TakeScreenshot("1.png");
+            await TakeScreenshot("new.png");
             //IList<Position> positions = await ImageToPositionsConverter.GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.png");
 
             // TODO: Remove

@@ -1,11 +1,14 @@
 ﻿using AzureOCR;
+using Core;
 using Core.Model;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+#nullable enable
 
 namespace LottoXService
 {
@@ -20,8 +23,13 @@ namespace LottoXService
             // We will use only the text part of the line
             List<string> lineTexts = lines.Select((line, index) => line.Text).ToList();
 
-            // TODO: Ensure the order of the columns
-            // Symbol, Quantity, Last, Averag,                Open P/L (Acct), Open P/L %, Market Value
+            bool valid = Validate(lineTexts);
+            if (!valid)
+            {
+                Exception ex = new InvalidPortfolioStateException("Invalid portfolio state");
+                Log.Warning(ex, "Invalid portfolio state. Extracted text: {@Text}", lineTexts);
+                throw ex;
+            }
 
             // Get the indices of the lines that are option symbols
             Regex symbolRegex = new Regex(@"^[A-Z]{1,5} \d{6}[CP]\d+");
@@ -33,6 +41,24 @@ namespace LottoXService
             if (symbolIndices.Count == 0) return new List<Position>();
 
             return CreatePositions(lineTexts, symbolIndices);
+        }
+
+        private bool Validate(List<string> lineTexts)
+        {
+            int indexOfSymbol = lineTexts
+                .Select((text, index) => new { Text = text, Index = index })
+                .Where(obj => obj.Text == "Symbol")
+                .Select(obj => obj.Index)
+                .FirstOrDefault(); // Default is 0
+
+            // We are looking for the 4 column headers in this order: "Symbol", "Quantity", "Last", and "Average"
+            // However, "Quantity" may be interpreted as "A Quantity" due to the arrow to the left of the text "Quantity".
+            // "Average" may be cut off.
+            List<string> subList = lineTexts.GetRange(indexOfSymbol, 4);
+            string joined = string.Join(" ", subList);
+            Regex headersRegex = new Regex(@"^Symbol (A )?Quantity Last Aver");
+
+            return headersRegex.IsMatch(joined);
         }
 
         private List<Position> CreatePositions(List<string> lineTexts, List<int> symbolIndices)
