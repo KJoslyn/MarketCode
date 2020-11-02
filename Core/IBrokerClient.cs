@@ -8,7 +8,6 @@ namespace Core
     {
         public IList<Position> GetPositions();
         public Position? GetPosition(string symbol);
-        public OptionQuote GetQuote(string symbol);
-        public void PlaceOrder(Order order);
+        public void PlaceOrder(Order order, float price); // TODO: Remove price
     }
 }

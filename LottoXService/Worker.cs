@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,26 +41,39 @@ namespace LottoXService
             PositionDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
+            MarketDataClient = tdClient;
 
             if (_generalConfig.UsePaperTrade)
             {
                 PositionDatabase paperDatabase = new LitePositionDatabase(_generalConfig.PaperTradeDatabasePath);
-                BrokerClient = new PaperTradeBrokerClient(paperDatabase, tdClient);
+                BrokerClient = new PaperTradeBrokerClient(paperDatabase, MarketDataClient);
             }
             else
             {
                 BrokerClient = tdClient; 
             }
-            OrderManager = new OrderManager(BrokerClient, _orderConfig);
+            OrderManager = new OrderManager(BrokerClient, MarketDataClient, _orderConfig);
         }
 
         private IBrokerClient BrokerClient { get; }
         private LivePortfolioClient LivePortfolioClient { get; }
         private OrderManager OrderManager { get; }
+        private IMarketDataClient MarketDataClient { get; }
 
         class DeltaList
         {
             public IList<PositionDelta> Deltas { get; set; }
+        }
+
+        public override Task StartAsync(CancellationToken cancellationToken)
+        {
+            return base.StartAsync(cancellationToken);
+        }
+
+        public override Task StopAsync(CancellationToken cancellationToken)
+        {
+            LivePortfolioClient.Logout();
+            return base.StopAsync(cancellationToken);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -68,31 +82,31 @@ namespace LottoXService
 
             //string symbol = "SFIX_201120C35";
             //string symbol = "SFIX";
-            //OptionQuote quote = BrokerClient.GetQuote(symbol);
+            //OptionQuote quote = MarketDataClient.GetQuote(symbol);
 
             //Log.Information("Quote: {@Quote}", quote);
 
-            try
-            {
-                //(IList<Position> livePositions, IList<PositionDelta> deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+            //try
+            //{
+            //    //(IList<Position> livePositions, IList<PositionDelta> deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
 
-                IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
-                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json",
-                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json");
+            //    IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
+            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json",
+            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json");
 
-                Console.WriteLine(livePositions);
+            //    Console.WriteLine(livePositions);
 
-                IList<Position> offlinePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
-                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json",
-                    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json");
+            //    IList<Position> offlinePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
+            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json",
+            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json");
 
-                Console.WriteLine(offlinePositions);
+            //    Console.WriteLine(offlinePositions);
 
-            } catch (InvalidPortfolioStateException ex)
-            {
-                // TODO: Email/text notification???
-                Console.WriteLine("Invalid portfolio state");
-            }
+            //} catch (InvalidPortfolioStateException ex)
+            //{
+            //    // TODO: Email/text notification???
+            //    Console.WriteLine("Invalid portfolio state");
+            //}
 
             //DeltaList list;
             //using (StreamReader r = new StreamReader("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/deltas.json"))
@@ -139,9 +153,54 @@ namespace LottoXService
                 //await PortfolioClient.Logout();
             }
 
+            if (!MarketDataClient.IsMarketOpenToday())
+            {
+                Log.Information("Market closed today");
+                return;
+            }
+
+            TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
+            TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
+
             while (!stoppingToken.IsCancellationRequested)
             {
-                await Task.Delay(1000, stoppingToken);
+                TimeSpan now = DateTime.Now.TimeOfDay;
+                if (now >= marketCloseTime)
+                {
+                    // End of day, we're done!
+                    return;
+                }
+
+                if (now >= marketOpenTime)
+                {
+                    IList<Position> livePositions;
+                    IList<PositionDelta> deltas;
+                    try
+                    {
+                        (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                    }
+                    catch (InvalidPortfolioStateException ex)
+                    {
+                        await Task.Delay(30*1000, stoppingToken);
+                        continue;
+                    }
+
+                    foreach (PositionDelta delta in deltas)
+                    {
+                        Order? order = OrderManager.DecideOrder(delta);
+                        if (order != null)
+                        {
+                            BrokerClient.PlaceOrder(order, delta.Price);
+                        }
+                    }
+                    await Task.Delay(30*1000, stoppingToken);
+                }
+                else if (now <= marketOpenTime)
+                {
+                    Log.Warning("Market not open yet!");
+                    // Or, wait until 9:30am
+                    await Task.Delay(30*1000, stoppingToken);
+                }
             }
         }
     }

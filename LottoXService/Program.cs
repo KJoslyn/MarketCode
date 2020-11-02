@@ -45,6 +45,7 @@ namespace LottoXService
         public static IHostBuilder CreateHostBuilder(string[] args, IConfigurationRoot configuration)
         {
             return Host.CreateDefaultBuilder(args)
+                .UseWindowsService()
                 .UseSerilog()
                 .ConfigureServices((hostcontext, services) =>
                 {

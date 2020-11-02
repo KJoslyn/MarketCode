@@ -59,7 +59,15 @@ namespace TDAmeritrade
             return quote;
         }
 
-        public void PlaceOrder(Order order)
+        public bool IsMarketOpenToday()
+        {
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/OPTION/hours");
+            RestRequest request = CreateRequest(Method.GET);
+            IRestResponse response = ExecuteRequest(client, request);
+            return response.Content.Contains("\"isOpen\":true");
+        }
+
+        public void PlaceOrder(Order order, float price)
         {
             throw new System.NotImplementedException();
         }
