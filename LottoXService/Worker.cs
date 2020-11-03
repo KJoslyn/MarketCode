@@ -42,6 +42,7 @@ namespace LottoXService
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
+            tdClient.GetPositions();
 
             if (_generalConfig.UsePaperTrade)
             {
@@ -78,6 +79,7 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            MarketDataClient.GetQuote("AAPL_201120C115");
             //IList<Position> positions = BrokerClient.GetPositions();
 
             //string symbol = "SFIX_201120C35";
@@ -140,18 +142,8 @@ namespace LottoXService
 
             //IList<Position> positions = BrokerClient.GetPositions();
 
-            try
-            {
-                //PortfolioClient.GetPositions();
-            }
-            catch (Exception ex)
-            {
+            return;
 
-            }
-            finally
-            {
-                //await PortfolioClient.Logout();
-            }
 
             if (!MarketDataClient.IsMarketOpenToday())
             {
@@ -190,7 +182,7 @@ namespace LottoXService
                         Order? order = OrderManager.DecideOrder(delta);
                         if (order != null)
                         {
-                            BrokerClient.PlaceOrder(order, delta.Price);
+                            BrokerClient.PlaceOrder(order);
                         }
                     }
                     await Task.Delay(30*1000, stoppingToken);

@@ -12,43 +12,56 @@ namespace Core
 {
     public class OrderManager
     {
-        private IBrokerClient _client;
         private OrderConfig _config;
 
-        public OrderManager(IBrokerClient client, OrderConfig config)
+        public OrderManager(IBrokerClient brokerClient, IMarketDataClient marketDataClient, OrderConfig config)
         {
-            _client = client;
+            BrokerClient = brokerClient;
+            MarketDataClient = marketDataClient;
             _config = config;
         }
 
+        private IBrokerClient BrokerClient { get; }
+        private IMarketDataClient MarketDataClient { get; }
+
         public Order? DecideOrder(PositionDelta delta)
         {
+            Position? currentPos = BrokerClient.GetPosition(delta.Symbol);
             if (delta.DeltaType == DeltaType.ADD)
             {
-                return DecideAdd(delta);
+                return DecideAdd(delta, currentPos);
             }
             if (delta.DeltaType == DeltaType.NEW)
             {
-                return DecideNew(delta);
+                return DecideNew(delta, currentPos);
             }
             if (delta.DeltaType == DeltaType.SELL)
             {
-                return DecideSell(delta);
+                return DecideSell(delta, currentPos);
             }
             Log.Error("Unrecognized deltaType: {type}", delta.DeltaType);
             return null;
         }
 
-        private Order? DecideAdd(PositionDelta delta)
+        private Order? DecideAdd(PositionDelta delta, Position? currentPos)
         {
-            Log.Information("ADD delta {@Delta}- taking no action", delta);
+            Log.Information("ADD delta {@Delta}- taking no action. Symbol {Symbol}", delta, delta.Symbol);
             return null;
         }
 
-        private Order? DecideNew(PositionDelta delta)
+        private Order? DecideNew(PositionDelta delta, Position? currentPos)
         {
-            OptionQuote quote = _client.GetQuote(delta.Symbol);
-            Log.Information("NEW delta {@Delta}- current mark price {Mark}", delta, quote.Mark);
+            OptionQuote quote = MarketDataClient.GetQuote(delta.Symbol);
+            // TODO: Remove after testing
+            //Log.Warning("Not getting real quote");
+            //OptionQuote quote = new OptionQuote(delta.Symbol, delta.Price * (float).99, delta.Price * (float)1.01, delta.Price, delta.Price * (float)1.06, (float)1.0);
+            Log.Information("NEW delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta, quote.Mark, delta.Symbol);
+
+            if (currentPos != null)
+            {
+                Log.Warning("Current position exists {@CurrentPosition} for new delta {@Delta}. Taking no action for Symbol {Symbol}", currentPos, delta, delta.Symbol);
+                return null;
+            }
 
             float diff = quote.Mark - delta.Price;
             float absPercent = Math.Abs(diff / delta.Price);
@@ -63,7 +76,7 @@ namespace Core
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.MARKET)
             {
                 orderType = OrderType.MARKET;
-                quantity = DecideNewBuyQuantity(quote.AskPrice); // Assume we will pay the ask price
+                quantity = DecideNewBuyQuantity(quote.Ask); // Assume we will pay the ask price
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.DELTA_LIMIT ||
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.DELTA_LIMIT)
@@ -83,14 +96,14 @@ namespace Core
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 - _config.LowBuyThreshold);
                 quantity = DecideNewBuyQuantity(limit);
-            }    
+            }
             else
             {
-                Log.Information("Current mark price not within buy threshold. Skipping order.");
+                Log.Information("Current mark price not within buy threshold. Skipping order. Symbol {Symbol}", delta.Symbol);
                 return null;
             }
-            Order order = new Order(delta.Symbol, quantity, TransactionType.BUY_TO_OPEN, orderType, limit);
-            Log.Information("Decided new Order: {@Order}", order);
+            Order order = new Order(delta.Symbol, quantity, InstructionType.BUY_TO_OPEN, orderType, limit);
+            Log.Information("Decided new Order: {@Order} for Symbol {Symbol}", order, order.Symbol);
             return order;
         }
 
@@ -100,20 +113,19 @@ namespace Core
         }
 
         // Currently, only market sell orders are supported
-        private Order? DecideSell(PositionDelta delta)
+        private Order? DecideSell(PositionDelta delta, Position? currentPos)
         {
-            Log.Information("SELL delta {@Delta}", delta);
+            Log.Information("SELL delta {@Delta}, Symbol {Symbol}", delta, delta.Symbol);
 
-            Position? currentPos = _client.GetPosition(delta.Symbol);
             if (currentPos == null)
             {
-                Log.Information("No current position corresponding to delta {@Delta}", delta);
+                Log.Information("No current position corresponding to delta {@Delta}. Symbol {Symbol}", delta, delta.Symbol);
                 return null;
             }
             float quantity = (float)Math.Ceiling(delta.Percent * currentPos.LongQuantity);
 
-            Order order = new Order(delta.Symbol, quantity, TransactionType.SELL_TO_CLOSE, OrderType.MARKET, -1);
-            Log.Information("Decided sell order {@Order}", order);
+            Order order = new Order(delta.Symbol, quantity, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, -1);
+            Log.Information("Decided sell order {@Order} for Symbol {Symbol}", order, order.Symbol);
             return order;
         }
     }

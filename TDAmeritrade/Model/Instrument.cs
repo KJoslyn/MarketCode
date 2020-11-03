@@ -2,6 +2,12 @@
 {
     internal class Instrument
     {
+        public Instrument(string symbol, string assetType)
+        {
+            Symbol = symbol;
+            AssetType = assetType;
+        }
+
         public string AssetType { get; init; }
         public string Cusip { get; init; }
         public string Symbol { get; init; }

@@ -6,5 +6,6 @@
         public const string CALL = nameof(CALL);
         public const string PUT = nameof(PUT);
         public const string CASH = nameof(CASH);
+        public const string OPTION = nameof(OPTION);
     }
 }

@@ -32,30 +32,30 @@ namespace Core
             return PositionDB.GetStoredPositions();
         }
 
-        public OptionQuote GetQuote(string symbol)
-        {
-            return MarketDataClient.GetQuote(symbol);
-        }
-
         public void PlaceOrder(Order order)
         {
-            if (order.TransactionType == TransactionType.SELL_TO_CLOSE)
+            PlaceOrder(order, 0);
+        }
+
+        public void PlaceOrder(Order order, float price = 0)
+        {
+            if (order.Instruction == InstructionType.SELL_TO_CLOSE)
             {
-                PlaceSellOrder(order);
+                PlaceSellOrder(order, price);
             }
-            else if (order.TransactionType == TransactionType.BUY_TO_OPEN)
+            else if (order.Instruction == InstructionType.BUY_TO_OPEN)
             {
-                PlaceBuyOrder(order);
+                PlaceBuyOrder(order, price);
             }
             else
             {
-                Exception ex = new OrderException("Unrecognized transaction type: " + order.TransactionType);
+                Exception ex = new OrderException("Unrecognized transaction type: " + order.Instruction);
                 Log.Error(ex, "Unrecognized transaction type in order {@Order}", order);
                 throw ex;
             }
         }
 
-        private void PlaceBuyOrder(Order order)
+        private void PlaceBuyOrder(Order order, float price = 0)
         {
             Position? currentPos = GetPosition(order.Symbol);
 
@@ -71,15 +71,17 @@ namespace Core
                 PositionDB.DeletePosition(currentPos);
             }
 
-            float price;
-            if (order.OrderType == OrderType.LIMIT)
+            if (price <= 0)
             {
-                price = order.Limit;
-            }
-            else
-            {
-                OptionQuote quote = MarketDataClient.GetQuote(order.Symbol);
-                price = quote.AskPrice;
+                if (order.OrderType == OrderType.LIMIT)
+                {
+                    price = order.Limit;
+                }
+                else
+                {
+                    OptionQuote quote = MarketDataClient.GetQuote(order.Symbol);
+                    price = quote.Ask;
+                }
             }
 
             PositionDelta delta = new PositionDelta(deltaType, order.Symbol, order.Quantity, price, percent);
@@ -93,7 +95,7 @@ namespace Core
             PositionDB.InsertPosition(newPos);
         }
 
-        private void PlaceSellOrder(Order order)
+        private void PlaceSellOrder(Order order, float price = 0)
         {
             Position? currentPos = GetPosition(order.Symbol);
             if (currentPos == null)
@@ -104,15 +106,17 @@ namespace Core
             }
             float percent = order.Quantity / currentPos.LongQuantity;
 
-            float price;
-            if (order.OrderType == OrderType.LIMIT)
+            if (price <= 0)
             {
-                price = order.Limit;
-            }
-            else
-            {
-                OptionQuote quote = MarketDataClient.GetQuote(order.Symbol);
-                price = quote.BidPrice;
+                if (order.OrderType == OrderType.LIMIT)
+                {
+                    price = order.Limit;
+                }
+                else
+                {
+                    OptionQuote quote = MarketDataClient.GetQuote(order.Symbol);
+                    price = quote.Bid;
+                }
             }
 
             PositionDelta delta = new PositionDelta(DeltaType.SELL, order.Symbol, order.Quantity, price, percent);
