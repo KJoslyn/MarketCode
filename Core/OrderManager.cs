@@ -55,7 +55,7 @@ namespace Core
             // TODO: Remove after testing
             //Log.Warning("Not getting real quote");
             //OptionQuote quote = new OptionQuote(delta.Symbol, delta.Price * (float).99, delta.Price * (float)1.01, delta.Price, delta.Price * (float)1.06, (float)1.0);
-            Log.Information("NEW delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta, quote.Mark, delta.Symbol);
+            Log.Information("NEW delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta, quote.Mark.ToString("0.00"), delta.Symbol);
 
             if (currentPos != null)
             {
@@ -68,7 +68,7 @@ namespace Core
             bool withinHighThreshold = Math.Sign(diff) >= 0 && absPercent <= _config.HighBuyThreshold;
             bool withinLowThreshold = Math.Sign(diff) <= 0 && absPercent <= _config.LowBuyThreshold;
 
-            float quantity;
+            int quantity;
             string orderType;
             float limit = -1;
 
@@ -99,7 +99,7 @@ namespace Core
             }
             else
             {
-                Log.Information("Current mark price not within buy threshold. Skipping order. Symbol {Symbol}", delta.Symbol);
+                Log.Information("Current mark price not within buy threshold. Skipping order. Symbol {Symbol}, Mark={Mark}", delta.Symbol, quote.Mark.ToString("0.00"));
                 return null;
             }
             Order order = new Order(delta.Symbol, quantity, InstructionType.BUY_TO_OPEN, orderType, limit);
@@ -107,9 +107,9 @@ namespace Core
             return order;
         }
 
-        private float DecideNewBuyQuantity(float price)
+        private int DecideNewBuyQuantity(float price)
         {
-            return (float)Math.Floor(_config.NewPositionSize / (price * 100));
+            return (int)Math.Floor(_config.NewPositionSize / (price * 100));
         }
 
         // Currently, only market sell orders are supported
@@ -122,7 +122,7 @@ namespace Core
                 Log.Information("No current position corresponding to delta {@Delta}. Symbol {Symbol}", delta, delta.Symbol);
                 return null;
             }
-            float quantity = (float)Math.Ceiling(delta.Percent * currentPos.LongQuantity);
+            int quantity = (int)Math.Ceiling(delta.Percent * currentPos.LongQuantity);
 
             Order order = new Order(delta.Symbol, quantity, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, -1);
             Log.Information("Decided sell order {@Order} for Symbol {Symbol}", order, order.Symbol);

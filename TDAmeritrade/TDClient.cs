@@ -2,7 +2,9 @@
 using Core.Model;
 using Core.Model.Constants;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using RestSharp;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -114,10 +116,10 @@ namespace TDAmeritrade
         private string CreateOrderBody(Order order)
         {
             Instrument instrument = new Instrument(order.Symbol, AssetType.OPTION);
-            OrderLeg orderLeg = new OrderLeg(order.Instruction, order.Quantity, instrument);
+            OrderLeg orderLeg = new OrderLeg(order.Instruction, (int)order.Quantity, instrument);
             List<OrderLeg> orderLegCollection = new List<OrderLeg>();
             orderLegCollection.Add(orderLeg);
-            string priceStr = "";
+            string? priceStr = null;
             if (order.OrderType == OrderType.LIMIT)
             {
                 double doublePrice = Math.Round(order.Limit, 2);
@@ -133,7 +135,16 @@ namespace TDAmeritrade
                 "SINGLE",
                 orderLegCollection);
 
-            return JsonConvert.SerializeObject(orderBody);
+            string orderBodyStr = JsonConvert.SerializeObject(orderBody, new JsonSerializerSettings
+            {
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            });
+            Log.Information("TDAm Order: {@Order}, string: {OrderStr}, Symbol {Symbol}", orderBody, orderBodyStr, order.Symbol);
+            return orderBodyStr;
         }
     }
 }

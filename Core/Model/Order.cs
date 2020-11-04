@@ -11,7 +11,7 @@ namespace Core.Model
 {
     public class Order
     {
-        public Order(string symbol, float quantity, string instruction, string orderType, float limit)
+        public Order(string symbol, int quantity, string instruction, string orderType, float limit)
         {
             if (orderType == Core.Model.Constants.OrderType.LIMIT && limit <= 0)
             {
@@ -28,7 +28,7 @@ namespace Core.Model
         }
 
         public string Symbol { get; }
-        public float Quantity { get; }
+        public int Quantity { get; }
         public string Instruction { get; }
         public string OrderType { get; }
         public float Limit { get; }
