@@ -35,7 +35,7 @@ namespace Core
                         livePos.Symbol,
                         livePos.LongQuantity,
                         livePos.AveragePrice,
-                        1);
+                        0);
                     deltas.Add(delta);
                 }
             }

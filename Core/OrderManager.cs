@@ -26,40 +26,38 @@ namespace Core
 
         public Order? DecideOrder(PositionDelta delta)
         {
+            // TODO: Remove after testing
+            //Log.Warning("Not getting real quote");
+            //OptionQuote quote = new OptionQuote(delta.Symbol, delta.Price * (float).99, delta.Price * (float)1.01, delta.Price, delta.Price * (float)1.06, (float)1.0);
+            OptionQuote quote = MarketDataClient.GetQuote(delta.Symbol);
+            Log.Information("{DeltaType} delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta.DeltaType, delta, quote.Mark.ToString("0.00"), delta.Symbol);
+
             Position? currentPos = BrokerClient.GetPosition(delta.Symbol);
-            if (delta.DeltaType == DeltaType.ADD)
-            {
-                return DecideAdd(delta, currentPos);
-            }
-            if (delta.DeltaType == DeltaType.NEW)
-            {
-                return DecideNew(delta, currentPos);
-            }
             if (delta.DeltaType == DeltaType.SELL)
             {
                 return DecideSell(delta, currentPos);
             }
-            Log.Error("Unrecognized deltaType: {type}", delta.DeltaType);
-            return null;
-        }
-
-        private Order? DecideAdd(PositionDelta delta, Position? currentPos)
-        {
-            Log.Information("ADD delta {@Delta}- taking no action. Symbol {Symbol}", delta, delta.Symbol);
-            return null;
-        }
-
-        private Order? DecideNew(PositionDelta delta, Position? currentPos)
-        {
-            OptionQuote quote = MarketDataClient.GetQuote(delta.Symbol);
-            // TODO: Remove after testing
-            //Log.Warning("Not getting real quote");
-            //OptionQuote quote = new OptionQuote(delta.Symbol, delta.Price * (float).99, delta.Price * (float)1.01, delta.Price, delta.Price * (float)1.06, (float)1.0);
-            Log.Information("NEW delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta, quote.Mark.ToString("0.00"), delta.Symbol);
-
-            if (currentPos != null)
+            else if (delta.DeltaType == DeltaType.ADD ||
+                delta.DeltaType == DeltaType.NEW)
             {
-                Log.Warning("Current position exists {@CurrentPosition} for new delta {@Delta}. Taking no action for Symbol {Symbol}", currentPos, delta, delta.Symbol);
+                return DecideBuy(delta, currentPos, quote);
+            }
+            else
+            {
+                Log.Error("Unrecognized deltaType: {type}", delta.DeltaType);
+                return null;
+            }
+        }
+
+        private Order? DecideBuy(PositionDelta delta, Position? currentPos, OptionQuote quote)
+        {
+            if (delta.DeltaType == DeltaType.ADD && currentPos == null)
+            {
+                Log.Information("No current position corresponding to {DeltaType} delta {@Delta}. Symbol {Symbol}", delta.DeltaType, delta, delta.Symbol);
+            }
+            else if (delta.DeltaType == DeltaType.NEW && currentPos != null)
+            {
+                Log.Warning("Current position exists {@CurrentPosition} for {DeltaType} delta {@Delta}. Taking no action for Symbol {Symbol}", currentPos, delta.DeltaType, delta, delta.Symbol);
                 return null;
             }
 
@@ -67,7 +65,6 @@ namespace Core
             float absPercent = Math.Abs(diff / delta.Price);
             bool withinHighThreshold = Math.Sign(diff) >= 0 && absPercent <= _config.HighBuyThreshold;
             bool withinLowThreshold = Math.Sign(diff) <= 0 && absPercent <= _config.LowBuyThreshold;
-            float deltaMarketValue = delta.Price * delta.Quantity * 100;
 
             int quantity;
             string orderType;
@@ -77,26 +74,26 @@ namespace Core
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.MARKET)
             {
                 orderType = OrderType.MARKET;
-                quantity = DecideNewBuyQuantity(quote.Ask, deltaMarketValue); // Assume we will pay the ask price
+                quantity = DecideBuyQuantity(quote.Ask, delta, currentPos); // Assume we will pay the ask price
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.DELTA_LIMIT ||
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.DELTA_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price;
-                quantity = DecideNewBuyQuantity(limit, deltaMarketValue);
+                quantity = DecideBuyQuantity(limit, delta, currentPos);
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 + _config.HighBuyThreshold);
-                quantity = DecideNewBuyQuantity(limit, deltaMarketValue);
+                quantity = DecideBuyQuantity(limit, delta, currentPos);
             }
             else if (withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 - _config.LowBuyThreshold);
-                quantity = DecideNewBuyQuantity(limit, deltaMarketValue);
+                quantity = DecideBuyQuantity(limit, delta, currentPos);
             }
             else
             {
@@ -108,17 +105,50 @@ namespace Core
             return order;
         }
 
-        private int DecideNewBuyQuantity(float price, float deltaMarketValue)
+        private int DecideBuyQuantity(float price, PositionDelta delta, Position? currentPos)
         {
-            float percent = deltaMarketValue / _config.LivePortfolioPositionMaxSize;
-            return (int)Math.Floor((percent * _config.MyPositionMaxSize) / (price * 100));
+            float currentPosTotalAlloc = currentPos != null
+                ? currentPos.LongQuantity * currentPos.AveragePrice * 100
+                : 0;
+
+            int buyQuantity;
+            if (delta.DeltaType == DeltaType.NEW)
+            {
+                float deltaMarketValue = delta.Price * delta.Quantity * 100;
+                float percentOfMaxSize = deltaMarketValue / _config.LivePortfolioPositionMaxSize;
+                if (percentOfMaxSize > 1)
+                {
+                    Log.Warning("New position in live portfolio exceeds expected max size. Delta {@Delta}", delta);
+                    percentOfMaxSize = 1;
+                }
+                buyQuantity = (int)Math.Floor((percentOfMaxSize * _config.MyPositionMaxSize) / (price * 100));
+            }
+            else if (delta.DeltaType == DeltaType.ADD)
+            {
+                float addAlloc = currentPosTotalAlloc * delta.Percent;
+                buyQuantity = (int)Math.Floor(addAlloc / (price * 100));
+            }
+            else
+            {
+                Log.Warning("Invalid delta type supplied to DecideBuyQuantity function. Delta {@Delta}", delta);
+                return 0;
+            }
+
+            float newTotalAlloc = currentPosTotalAlloc + buyQuantity * price * 100;
+            if (newTotalAlloc > _config.MyPositionMaxSize)
+            {
+                Log.Information("Buying " + buyQuantity + " {Symbol} would exceed maximum allocation of " + _config.MyPositionMaxSize.ToString("0.00"), delta.Symbol);
+                return 0;
+            }
+            else
+            {
+                return buyQuantity;
+            }
         }
 
         // Currently, only market sell orders are supported
         private Order? DecideSell(PositionDelta delta, Position? currentPos)
         {
-            Log.Information("SELL delta {@Delta}, Symbol {Symbol}", delta, delta.Symbol);
-
             if (currentPos == null)
             {
                 Log.Information("No current position corresponding to delta {@Delta}. Symbol {Symbol}", delta, delta.Symbol);
