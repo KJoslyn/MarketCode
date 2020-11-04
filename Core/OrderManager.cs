@@ -67,6 +67,7 @@ namespace Core
             float absPercent = Math.Abs(diff / delta.Price);
             bool withinHighThreshold = Math.Sign(diff) >= 0 && absPercent <= _config.HighBuyThreshold;
             bool withinLowThreshold = Math.Sign(diff) <= 0 && absPercent <= _config.LowBuyThreshold;
+            float deltaMarketValue = delta.Price * delta.Quantity * 100;
 
             int quantity;
             string orderType;
@@ -76,26 +77,26 @@ namespace Core
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.MARKET)
             {
                 orderType = OrderType.MARKET;
-                quantity = DecideNewBuyQuantity(quote.Ask); // Assume we will pay the ask price
+                quantity = DecideNewBuyQuantity(quote.Ask, deltaMarketValue); // Assume we will pay the ask price
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.DELTA_LIMIT ||
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.DELTA_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price;
-                quantity = DecideNewBuyQuantity(limit);
+                quantity = DecideNewBuyQuantity(limit, deltaMarketValue);
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 + _config.HighBuyThreshold);
-                quantity = DecideNewBuyQuantity(limit);
+                quantity = DecideNewBuyQuantity(limit, deltaMarketValue);
             }
             else if (withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 - _config.LowBuyThreshold);
-                quantity = DecideNewBuyQuantity(limit);
+                quantity = DecideNewBuyQuantity(limit, deltaMarketValue);
             }
             else
             {
@@ -107,9 +108,10 @@ namespace Core
             return order;
         }
 
-        private int DecideNewBuyQuantity(float price)
+        private int DecideNewBuyQuantity(float price, float deltaMarketValue)
         {
-            return (int)Math.Floor(_config.NewPositionSize / (price * 100));
+            float percent = deltaMarketValue / _config.LivePortfolioPositionMaxSize;
+            return (int)Math.Floor((percent * _config.MyPositionMaxSize) / (price * 100));
         }
 
         // Currently, only market sell orders are supported

@@ -12,6 +12,7 @@ namespace Core
         public float HighBuyThreshold { get; init; }
         public string LowBuyStrategy { get; init; } // One of the BuyStrategyType constants
         public string HighBuyStrategy { get; init; } // One of the BuyStrategyType constants
-        public float NewPositionSize { get; init; }
+        public float MyPositionMaxSize { get; init; }
+        public float LivePortfolioPositionMaxSize { get; init; }
     }
 }
