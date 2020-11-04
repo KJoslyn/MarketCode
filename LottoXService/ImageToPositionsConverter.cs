@@ -56,7 +56,7 @@ namespace LottoXService
             // "Average" may be cut off.
             List<string> subList = lineTexts.GetRange(indexOfSymbol, 4);
             string joined = string.Join(" ", subList);
-            Regex headersRegex = new Regex(@"^Symbol (A )?Quantity Last Aver");
+            Regex headersRegex = new Regex("^Symbol (. )?Quantity Last Aver");
 
             return headersRegex.IsMatch(joined);
         }

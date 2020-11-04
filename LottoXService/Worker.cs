@@ -110,22 +110,22 @@ namespace LottoXService
             //    Console.WriteLine("Invalid portfolio state");
             //}
 
-            DeltaList list;
-            using (StreamReader r = new StreamReader("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/deltas.json"))
-            {
-                string json = r.ReadToEnd();
-                list = JsonConvert.DeserializeObject<DeltaList>(json);
-            }
-            IList<PositionDelta> deltaList = list.Deltas;
+            //DeltaList list;
+            //using (StreamReader r = new StreamReader("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/deltas.json"))
+            //{
+            //    string json = r.ReadToEnd();
+            //    list = JsonConvert.DeserializeObject<DeltaList>(json);
+            //}
+            //IList<PositionDelta> deltaList = list.Deltas;
 
-            foreach (PositionDelta delta in deltaList)
-            {
-                Order? order = OrderManager.DecideOrder(delta);
-                if (order != null)
-                {
-                    BrokerClient.PlaceOrder(order);
-                }
-            }
+            //foreach (PositionDelta delta in deltaList)
+            //{
+            //    Order? order = OrderManager.DecideOrder(delta);
+            //    if (order != null)
+            //    {
+            //        BrokerClient.PlaceOrder(order);
+            //    }
+            //}
 
             //IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
             //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.png",
@@ -142,8 +142,8 @@ namespace LottoXService
 
             //IList<Position> positions = BrokerClient.GetPositions();
 
-            Log.Information("RETURNING EARLY!!!!!!!");
-            return;
+            //Log.Information("RETURNING EARLY!!!!!!!");
+            //return;
 
 
             if (!MarketDataClient.IsMarketOpenToday())
