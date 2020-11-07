@@ -1,6 +1,8 @@
 ﻿using Core;
 using Core.Model;
 using LiteDB;
+using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 #nullable enable
@@ -43,12 +45,19 @@ namespace Database
 
         public override void InsertPosition(Position position)
         {
+            Position currentPos = _db.GetCollection<Position>().FindOne(pos => pos.Symbol == position.Symbol);
+            if (currentPos != null)
+            {
+                Exception ex = new PositionDatabaseException("Cannot insert position since one already exists");
+                Log.Error(ex, "Tried to insert {@Position} but one already exists in the database: {@CurrentPosition}", position, currentPos);
+                throw ex;
+            }
             _db.GetCollection<Position>().Insert(position);
         }
 
         public override void DeletePosition(Position position)
         {
-            _db.GetCollection<Position>().Delete(position.Id);
+            _db.GetCollection<Position>().DeleteMany(pos => pos.Symbol == position.Symbol);
         }
     }
 }

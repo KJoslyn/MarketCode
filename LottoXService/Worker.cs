@@ -24,14 +24,17 @@ namespace LottoXService
         private readonly OCRConfig _ocrConfig;
         private readonly GeneralConfig _generalConfig;
         private readonly OrderConfig _orderConfig;
+        private IHostApplicationLifetime _hostApplicationLifetime;
 
         public Worker(
+            IHostApplicationLifetime hostApplicationLifetime,
             IOptions<RagingBullConfig> rbOptions, 
             IOptions<TDAmeritradeConfig> tdOptions, 
             IOptions<OCRConfig> ocrOptions, 
             IOptions<GeneralConfig> generalOptions,
             IOptions<OrderConfig> orderOptions)
         {
+            _hostApplicationLifetime = hostApplicationLifetime;
             _ragingBullConfig = rbOptions.Value;
             _tdAmeritradeConfig = tdOptions.Value;
             _ocrConfig = ocrOptions.Value;
@@ -160,8 +163,8 @@ namespace LottoXService
                 TimeSpan now = DateTime.Now.TimeOfDay;
                 if (now >= marketCloseTime)
                 {
-                    // End of day, we're done!
-                    return;
+                    Log.Information("Market now closed!");
+                    break;
                 }
 
                 if (now >= marketOpenTime)
@@ -195,6 +198,7 @@ namespace LottoXService
                     await Task.Delay(30*1000, stoppingToken);
                 }
             }
+            _hostApplicationLifetime.StopApplication();
         }
     }
 }

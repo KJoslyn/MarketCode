@@ -112,7 +112,8 @@ namespace Core
                 : 0;
 
             int buyQuantity;
-            if (delta.DeltaType == DeltaType.NEW)
+            if (delta.DeltaType == DeltaType.NEW ||
+                delta.DeltaType == DeltaType.ADD && currentPos == null)
             {
                 float deltaMarketValue = delta.Price * delta.Quantity * 100;
                 float percentOfMaxSize = deltaMarketValue / _config.LivePortfolioPositionMaxSize;
@@ -123,7 +124,7 @@ namespace Core
                 }
                 buyQuantity = (int)Math.Floor((percentOfMaxSize * _config.MyPositionMaxSize) / (price * 100));
             }
-            else if (delta.DeltaType == DeltaType.ADD)
+            else if (delta.DeltaType == DeltaType.ADD && currentPos != null)
             {
                 float addAlloc = currentPosTotalAlloc * delta.Percent;
                 buyQuantity = (int)Math.Floor(addAlloc / (price * 100));

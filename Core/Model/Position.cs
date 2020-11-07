@@ -21,7 +21,6 @@ namespace Core.Model
             DateUpdated = DateTime.Now;
         }
 
-        public int Id { get; set; }
         public virtual string Symbol { get; init; }
         public virtual float LongQuantity { get; init; }
         public virtual float AveragePrice { get; init; }
