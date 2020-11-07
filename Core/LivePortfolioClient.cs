@@ -18,6 +18,8 @@ namespace Core
         // This does not update the database, but the method is not public.
         protected abstract Task<IList<Position>> GetLivePositions();
 
+        public abstract Task<bool> HasPortfolioChanged();
+
         // This does update the database so that the deltas remain accurate.
         // May throw InvalidPortfolioStateException if the portfolio is not in a valid state
         // (The portfolio may be offline, or its format may have changed.)

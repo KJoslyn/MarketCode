@@ -45,7 +45,6 @@ namespace LottoXService
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
-            tdClient.GetPositions();
 
             if (_generalConfig.UsePaperTrade)
             {
@@ -82,6 +81,18 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            ImageConsistencyClient con = new ImageConsistencyClient();
+            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/notre.jpg");
+            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/notre.jpg");
+            con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.jpg");
+            con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.jpg");
+
+
+            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio.png");
+            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.png");
+
+            return;
+
             //MarketDataClient.GetQuote("AAPL_201120C115");
             //IList<Position> positions = BrokerClient.GetPositions();
 
@@ -170,10 +181,13 @@ namespace LottoXService
                 if (now >= marketOpenTime)
                 {
                     IList<Position> livePositions;
-                    IList<PositionDelta> deltas;
+                    IList<PositionDelta> deltas = new List<PositionDelta>();
                     try
                     {
-                        (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                        if (await LivePortfolioClient.HasPortfolioChanged())
+                        {
+                            (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                        }
                     }
                     catch (InvalidPortfolioStateException ex)
                     {
