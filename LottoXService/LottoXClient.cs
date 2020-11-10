@@ -34,22 +34,48 @@ namespace LottoXService
             return positions;
         }
 
+        public override async Task<bool> Login()
+        {
+            bool loginResult = await base.Login();
+            await Task.Delay(6000);
+
+            string filepath = GetNextHeaderFilepath();
+            await TakeHeaderScreenshot(filepath);
+            HeaderConsistencyClient.Init(filepath);
+
+            return loginResult;
+        }
+
         public override async Task<bool> HasPortfolioChanged(bool? groundTruthChanged)
         {
-            if (!await IsLoggedIn())
+            if (await HasHeaderChanged())
             {
-                await Login();
-                await Task.Delay(6000);
+                InvalidPortfolioStateException ex = new InvalidPortfolioStateException("Header has changed");
+                Log.Information(ex, "Portfolio header has changed!");
+                throw ex;
             }
-            if (!await IsHeaderConsistent())
-            {
-                await Login();
-                await Task.Delay(6000);
-            }
-            int current = getCurrentHeaderScreenshotNumber();
-            string filePath = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantities-" + current + ".png";
-            await TakeQuantityColumnScreenshot(filePath);
-            return QuantityConsistencyClient.TestAndSetCurrentImage(filePath, groundTruthChanged);
+            string filepath = GetNextQuantityFilepath();
+            await TakeQuantityColumnScreenshot(filepath);
+            return QuantityConsistencyClient.TestAndSetCurrentImage(filepath, groundTruthChanged);
+        }
+
+        protected override async Task<IList<Position>> GetLivePositions()
+        {
+            Log.Information("Getting live positions");
+            string filepath = GetNextPortfolioFilepath();
+            await TakePortfolioScreenshot(filepath);
+            IList<Position> positions = await ImageToPositionsConverter.GetPositionsFromImage(filepath);
+            //IList <Position> positions = await ImageToPositionsConverter.GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json",
+            //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json"
+            //    );
+            return positions;
+        }
+
+        private async Task<bool> HasHeaderChanged()
+        {
+            string filepath = GetNextHeaderFilepath();
+            await TakeHeaderScreenshot(filepath);
+            return HeaderConsistencyClient.TestAndSetCurrentImage(filepath);
         }
 
         private int getCurrentHeaderScreenshotNumber()
@@ -66,37 +92,29 @@ namespace LottoXService
             return numbers.Max();
         }
 
-        private async Task<bool> IsHeaderConsistent()
+        private string GetNextHeaderFilepath()
         {
             int next = getCurrentHeaderScreenshotNumber() + 1;
-            string filePath = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/header-" + next + ".png";
-            await TakeHeaderScreenshot(filePath);
-            return HeaderConsistencyClient.TestAndSetCurrentImage(filePath);
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/header-" + next + ".png";
         }
 
-        protected override async Task<IList<Position>> GetLivePositions()
+        private string GetNextQuantityFilepath()
         {
-            // TODO: This doesn't really need to be checked since we already checked this recently in HasPortfolioChanged()
-            if (!await IsLoggedIn())
-            {
-                await Login();
-                await Task.Delay(6000);
-            }
-            Log.Information("Getting live positions");
             int current = getCurrentHeaderScreenshotNumber();
-            string filePath = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-" + current + ".png";
-            await TakePortfolioScreenshot(filePath);
-            IList<Position> positions = await ImageToPositionsConverter.GetPositionsFromImage(filePath);
-            //IList <Position> positions = await ImageToPositionsConverter.GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json",
-            //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json"
-            //    );
-            return positions;
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantities-" + current + ".png";
         }
 
-        private async Task TakeHeaderScreenshot(string filePath)
+        private string GetNextPortfolioFilepath()
+        {
+            int current = getCurrentHeaderScreenshotNumber();
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-" + current + ".png";
+        }
+
+
+        private async Task TakeHeaderScreenshot(string filepath)
         {
             Page page = await GetPage();
-            await page.ScreenshotAsync(filePath,
+            await page.ScreenshotAsync(filepath,
                 new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 350, X = 250 } });
         }
 

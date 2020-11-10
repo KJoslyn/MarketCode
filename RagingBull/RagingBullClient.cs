@@ -49,15 +49,7 @@ namespace RagingBull
             return true;
         }
 
-        protected async Task<bool> IsLoggedIn()
-        {
-            if (Browser == null) return false;
-
-            Page page = await GetPage();
-            return page.Url == PortfolioUrl;
-        }
-
-        protected virtual async Task<bool> Login()
+        public override async Task<bool> Login()
         {
             if (Browser == null)
             {
@@ -90,6 +82,14 @@ namespace RagingBull
                 return false;
             }
             return true;
+        }
+
+        protected async Task<bool> IsLoggedIn()
+        {
+            if (Browser == null) return false;
+
+            Page page = await GetPage();
+            return page.Url == PortfolioUrl;
         }
 
         protected async Task<ElementHandle?> GetElementWithContent(Page page, string elementType, string content)

@@ -17,6 +17,11 @@ namespace AzureOCR
     {
         private Image<Bgr, Byte>? LastImage { get; set; }
 
+        public void Init(string imagePath)
+        {
+            LastImage = new Image<Bgr, Byte>(imagePath);
+        }
+
         public bool TestAndSetCurrentImage(string imagePath, bool? groundTruthChanged = null)
         {
             Image<Bgr, Byte> current = new Image<Bgr, Byte>(imagePath);
@@ -39,6 +44,7 @@ namespace AzureOCR
 
             string imageFile = imagePath.Substring(imagePath.LastIndexOf("/") + 1);
             double minValue = Math.Round(minValues[0], 4);
+            //Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}", imageFile, minValues[0].ToString("0.0000"));
             Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}, GroundTruthChanged: {GroundTruthChanged}: ", imageFile, minValue, groundTruthChanged);
 
             // TODO ????

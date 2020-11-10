@@ -147,9 +147,12 @@ namespace LottoXService
                 Log.Information("Market closed today");
                 return;
             }
+            await LivePortfolioClient.Login();
 
             TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
             TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
+
+            int invalidCount = 0;
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -159,45 +162,59 @@ namespace LottoXService
                     Log.Information("Market now closed!");
                     break;
                 }
-
-                if (now >= marketOpenTime)
-                {
-                    IList<Position> livePositions;
-                    IList<PositionDelta> deltas = new List<PositionDelta>();
-                    try
-                    {
-                        // TODO
-                        //if (await LivePortfolioClient.HasPortfolioChanged())
-                        //{
-                        //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-                        //}
-                        (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-                        await LivePortfolioClient.HasPortfolioChanged(deltas.Count > 0);
-                        //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
-                    }
-                    catch (InvalidPortfolioStateException ex)
-                    {
-                        await Task.Delay(30*1000, stoppingToken);
-                        continue;
-                    }
-
-                    foreach (PositionDelta delta in deltas)
-                    {
-                        Order? order = OrderManager.DecideOrder(delta);
-                        if (order != null)
-                        {
-                            BrokerClient.PlaceOrder(order);
-                        }
-                    }
-                    await Task.Delay(30*1000, stoppingToken);
-                }
                 else if (now <= marketOpenTime)
                 {
                     Log.Warning("Market not open yet!");
                     // Or, wait until 9:30am
                     await Task.Delay(30*1000, stoppingToken);
+
+                    continue;
                 }
+
+                IList<Position> livePositions;
+                IList<PositionDelta> deltas = new List<PositionDelta>();
+
+                try
+                {
+                    // TODO
+                    //if (await LivePortfolioClient.HasPortfolioChanged())
+                    //{
+                    //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                    //}
+                    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                    await LivePortfolioClient.HasPortfolioChanged(deltas.Count > 0);
+                    //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
+
+                    invalidCount = 0;
+                }
+                catch (InvalidPortfolioStateException ex)
+                {
+                    invalidCount++;
+
+                    if (invalidCount == 2)
+                    {
+                        Log.Error("Portfolio found invalid {InvalidCount} times", invalidCount);
+                    } else if (invalidCount > 2)
+                    {
+                        Log.Fatal("Portfolio found invalid {InvalidCount} times", invalidCount);
+                        break;
+                    }
+                    await LivePortfolioClient.Login();
+
+                    continue;
+                }
+
+                foreach (PositionDelta delta in deltas)
+                {
+                    Order? order = OrderManager.DecideOrder(delta);
+                    if (order != null)
+                    {
+                        BrokerClient.PlaceOrder(order);
+                    }
+                }
+                await Task.Delay(30*1000, stoppingToken);
             }
+
             _hostApplicationLifetime.StopApplication();
         }
     }
