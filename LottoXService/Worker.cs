@@ -81,17 +81,14 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            ImageConsistencyClient con = new ImageConsistencyClient();
-            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/notre.jpg");
-            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/notre.jpg");
-            con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.jpg");
-            con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.jpg");
-
+            //ImageConsistencyClient con = new ImageConsistencyClient();
+            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantitiesTest1.png");
+            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantitiesTest2.png");
+            //return;
 
             //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio.png");
             //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.png");
 
-            return;
 
             //MarketDataClient.GetQuote("AAPL_201120C115");
             //IList<Position> positions = BrokerClient.GetPositions();
@@ -132,6 +129,10 @@ namespace LottoXService
             //}
             //IList<PositionDelta> deltaList = list.Deltas;
 
+            //await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
+
+            //return;
+
             //foreach (PositionDelta delta in deltaList)
             //{
             //    Order? order = OrderManager.DecideOrder(delta);
@@ -140,25 +141,6 @@ namespace LottoXService
             //        BrokerClient.PlaceOrder(order);
             //    }
             //}
-
-            //IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
-            //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.png",
-            //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json");
-
-            //IList<Position> oldPositions = LottoxPositionsDB.GetPositions();
-
-            //IList<PositionDelta> deltas = LottoxPositionsDB.ComputePositionDeltas(livePositions);
-            //LottoxPositionsDB.UpdatePositionsAndDeltas(livePositions, deltas);
-            //IList<Position> updatedPositions = LottoxPositionsDB.GetPositions();
-
-            //Console.WriteLine(oldPositions);
-            //Console.WriteLine(updatedPositions);
-
-            //IList<Position> positions = BrokerClient.GetPositions();
-
-            //Log.Information("RETURNING EARLY!!!!!!!");
-            //return;
-
 
             if (!MarketDataClient.IsMarketOpenToday())
             {
@@ -184,10 +166,14 @@ namespace LottoXService
                     IList<PositionDelta> deltas = new List<PositionDelta>();
                     try
                     {
-                        if (await LivePortfolioClient.HasPortfolioChanged())
-                        {
-                            (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-                        }
+                        // TODO
+                        //if (await LivePortfolioClient.HasPortfolioChanged())
+                        //{
+                        //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                        //}
+                        (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                        await LivePortfolioClient.HasPortfolioChanged(deltas.Count > 0);
+                        //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
                     }
                     catch (InvalidPortfolioStateException ex)
                     {

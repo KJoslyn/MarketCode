@@ -1,6 +1,7 @@
 ﻿using Microsoft.Azure.CognitiveServices.Vision.ComputerVision;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,7 +33,15 @@ namespace AzureOCR
             }
             else
             {
-                ReadInStreamHeaders textHeaders = await _client.ReadInStreamAsync(File.OpenRead(filePath), language: "en");
+                ReadInStreamHeaders textHeaders;
+                try
+                {
+                     textHeaders = await _client.ReadInStreamAsync(File.OpenRead(filePath), language: "en");
+                } catch (Exception ex)
+                {
+                    Log.Error(ex, "Error using Azure's ReadInStreamAsync method");
+                    return null;
+                }
                 string operationLocation = textHeaders.OperationLocation;
                 //Thread.Sleep(2000); // This is in the github examples
 

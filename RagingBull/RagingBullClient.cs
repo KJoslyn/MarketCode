@@ -39,6 +39,7 @@ namespace RagingBull
                     throw new RagingBullException("Could not find logout button");
                 }
                 await logout.ClickAsync();
+                await Browser.CloseAsync();
             }
             catch (Exception ex)
             {
@@ -56,10 +57,8 @@ namespace RagingBull
             return page.Url == PortfolioUrl;
         }
 
-        protected virtual async Task<bool> TryLogin()
+        protected virtual async Task<bool> Login()
         {
-            if (await IsLoggedIn()) return true;
-
             if (Browser == null)
             {
                 Browser = await StartBrowser();

@@ -8,6 +8,7 @@ using Emgu.CV.Structure;
 using System.Drawing;
 using System.Drawing.Imaging;
 using Emgu.CV.OCR;
+using Serilog;
 #nullable enable
 
 namespace AzureOCR
@@ -16,7 +17,7 @@ namespace AzureOCR
     {
         private Image<Bgr, Byte>? LastImage { get; set; }
 
-        public bool TestAndSetCurrentImage(string imagePath)
+        public bool TestAndSetCurrentImage(string imagePath, bool? groundTruthChanged = null)
         {
             Image<Bgr, Byte> current = new Image<Bgr, Byte>(imagePath);
 
@@ -34,11 +35,14 @@ namespace AzureOCR
             double[] minValues, maxValues;
             Point[] minLocations, maxLocations;
             resultImage.MinMax(out minValues, out maxValues, out minLocations, out maxLocations);
-            Console.WriteLine("minValues[0]: " + minValues[0]);
             LastImage = current;
 
+            string imageFile = imagePath.Substring(imagePath.LastIndexOf("/") + 1);
+            double minValue = Math.Round(minValues[0], 4);
+            Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}, GroundTruthChanged: {GroundTruthChanged}: ", imageFile, minValue, groundTruthChanged);
+
             // TODO ????
-            return minValues[0] >= 0.995;
+            return minValues[0] >= 0.9995;
         }
     }
 }

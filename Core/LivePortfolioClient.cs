@@ -18,7 +18,7 @@ namespace Core
         // This does not update the database, but the method is not public.
         protected abstract Task<IList<Position>> GetLivePositions();
 
-        public abstract Task<bool> HasPortfolioChanged();
+        public abstract Task<bool> HasPortfolioChanged(bool? groundTruthChanged);
 
         // This does update the database so that the deltas remain accurate.
         // May throw InvalidPortfolioStateException if the portfolio is not in a valid state
@@ -30,5 +30,16 @@ namespace Core
             PositionDB.UpdatePositionsAndDeltas(livePositions, deltas);
             return (livePositions, deltas);
         }
+
+        //// This does update the database so that the deltas remain accurate.
+        //// May throw InvalidPortfolioStateException if the portfolio is not in a valid state
+        //// (The portfolio may be offline, or its format may have changed.)
+        //public async Task<(IList<Position>, IList<PositionDelta>)> GetLivePositionsAndDeltas(IList<PositionDelta> deltas)
+        //{
+        //    IList<Position> livePositions = await GetLivePositions();
+        //    IList<PositionDelta> deltas = PositionDB.ComputePositionDeltas(livePositions);
+        //    PositionDB.UpdatePositionsAndDeltas(null, deltas);
+        //    return (null, deltas);
+        //}
     }
 }
