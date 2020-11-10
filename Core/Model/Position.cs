@@ -14,6 +14,7 @@ namespace Core.Model
             Symbol = symbol;
             LongQuantity = longQuantity;
             AveragePrice = averagePrice;
+            DateUpdated = DateTime.Now;
         }
 
         public Position()
@@ -24,7 +25,7 @@ namespace Core.Model
         public virtual string Symbol { get; init; }
         public virtual float LongQuantity { get; init; }
         public virtual float AveragePrice { get; init; }
-        public DateTime DateUpdated { get; init; }
+        public DateTime DateUpdated { get; set; }
 
         public string Type
         {

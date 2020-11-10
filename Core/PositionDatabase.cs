@@ -12,15 +12,92 @@ namespace Core
 
         public abstract IList<PositionDelta> GetStoredDeltas();
 
-        public abstract void UpdatePositionsAndDeltas(IList<Position> livePositions, IList<PositionDelta> positionDeltas);
+        public abstract IList<FilledOrder> GetStoredOrders();
+
+        protected abstract void InsertOrders(IList<FilledOrder> orders);
 
         public abstract void InsertDelta(PositionDelta delta);
 
+        public abstract void InsertDeltas(IList<PositionDelta> deltas);
+
         public abstract void InsertPosition(Position position);
+
+        public abstract void UpdateAllPositions(IList<Position> positions);
 
         public abstract void DeletePosition(Position position);
 
-        public IList<PositionDelta> ComputePositionDeltas(IList<Position> livePositions)
+        protected abstract bool OrderAlreadyExists(FilledOrder order);
+
+        protected abstract Position? GetPosition(string symbol);
+
+        public IList<PositionDelta> ComputeDeltasAndUpdateTables(IList<FilledOrder> liveOrders)
+        {
+            IList<FilledOrder> newOrders = liveOrders.Where(order => !OrderAlreadyExists(order)).ToList();
+            InsertOrders(newOrders);
+
+            IList<PositionDelta> deltas = new List<PositionDelta>();
+            foreach (FilledOrder order in newOrders)
+            {
+                Position? oldPos = GetPosition(order.Symbol);
+                if (oldPos == null) // NEW
+                {
+                    if (order.Instruction == InstructionType.SELL_TO_CLOSE)
+                    {
+                        // Warning
+                    }
+                    PositionDelta delta = new PositionDelta(
+                        DeltaType.NEW, 
+                        order.Symbol, 
+                        order.Quantity, 
+                        order.Price, 
+                        0);
+                    deltas.Add(delta);
+
+                    Position newPos = new Position(order.Symbol, order.Quantity, order.Price);
+                    InsertPosition(newPos);
+                }
+                else if (order.Instruction == InstructionType.BUY_TO_OPEN) // ADD
+                {
+                    PositionDelta delta = new PositionDelta(
+                        DeltaType.ADD,
+                        order.Symbol,
+                        order.Quantity,
+                        order.Price,
+                        order.Quantity / oldPos.LongQuantity);
+                    deltas.Add(delta);
+
+                    DeletePosition(oldPos);
+
+                    int newQuantity = (int)oldPos.LongQuantity + order.Quantity;
+                    float averagePrice = (oldPos.AveragePrice * oldPos.LongQuantity + order.Quantity * order.Price ) / newQuantity;
+                    Position position = new Position(order.Symbol, newQuantity, averagePrice);
+                    InsertPosition(position);
+                }
+                else if (order.Instruction == InstructionType.SELL_TO_CLOSE) // SELL
+                {
+                    PositionDelta delta = new PositionDelta(
+                        DeltaType.SELL,
+                        order.Symbol,
+                        order.Quantity,
+                        order.Price,
+                        order.Quantity / oldPos.LongQuantity);
+                    deltas.Add(delta);
+
+                    DeletePosition(oldPos);
+
+                    int newQuantity = (int)oldPos.LongQuantity - order.Quantity;
+                    if (newQuantity > 0)
+                    {
+                        Position position = new Position(order.Symbol, newQuantity, oldPos.AveragePrice);
+                        InsertPosition(position);
+                    }
+                }
+            }
+            InsertDeltas(deltas);
+            return deltas;
+        }
+
+        public IList<PositionDelta> ComputeDeltasAndUpdateTables(IList<Position> livePositions)
         {
             IList<PositionDelta> deltas = new List<PositionDelta>();
             IList<Position> oldPositions = GetStoredPositions();
@@ -79,6 +156,9 @@ namespace Core
                     deltas.Add(delta);
                 }
             }
+            InsertDeltas(deltas);
+            UpdateAllPositions(livePositions);
+
             return deltas;
         }
     }

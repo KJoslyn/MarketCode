@@ -81,6 +81,82 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (!MarketDataClient.IsMarketOpenToday())
+            {
+                Log.Information("Market closed today");
+                return;
+            }
+            await LivePortfolioClient.Login();
+
+            TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
+            TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
+
+            int invalidCount = 0;
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                TimeSpan now = DateTime.Now.TimeOfDay;
+                if (now >= marketCloseTime)
+                {
+                    Log.Information("Market now closed!");
+                    break;
+                }
+                else if (now <= marketOpenTime)
+                {
+                    Log.Warning("Market not open yet!");
+                    // Or, wait until 9:30am
+                    await Task.Delay(30*1000, stoppingToken);
+
+                    continue;
+                }
+
+                IList<PositionDelta> deltas = new List<PositionDelta>();
+
+                try
+                {
+                    // TODO
+                    //if (await LivePortfolioClient.HasPortfolioChanged())
+                    //{
+                    //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
+                    //}
+                    deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    await LivePortfolioClient.HaveOrdersChanged(deltas.Count > 0);
+                    //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
+
+                    invalidCount = 0;
+                }
+                catch (InvalidPortfolioStateException ex)
+                {
+                    invalidCount++;
+
+                    if (invalidCount == 2)
+                    {
+                        Log.Error("Portfolio found invalid {InvalidCount} times", invalidCount);
+                    } else if (invalidCount > 2)
+                    {
+                        Log.Fatal("Portfolio found invalid {InvalidCount} times", invalidCount);
+                        break;
+                    }
+                    await LivePortfolioClient.Login();
+
+                    continue;
+                }
+
+                foreach (PositionDelta delta in deltas)
+                {
+                    Order? order = OrderManager.DecideOrder(delta);
+                    if (order != null)
+                    {
+                        BrokerClient.PlaceOrder(order);
+                    }
+                }
+                await Task.Delay(30*1000, stoppingToken);
+            }
+
+            _hostApplicationLifetime.StopApplication();
+        }
+    }
+}
             //ImageConsistencyClient con = new ImageConsistencyClient();
             //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantitiesTest1.png");
             //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantitiesTest2.png");
@@ -141,81 +217,3 @@ namespace LottoXService
             //        BrokerClient.PlaceOrder(order);
             //    }
             //}
-
-            if (!MarketDataClient.IsMarketOpenToday())
-            {
-                Log.Information("Market closed today");
-                return;
-            }
-            await LivePortfolioClient.Login();
-
-            TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
-            TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
-
-            int invalidCount = 0;
-
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                TimeSpan now = DateTime.Now.TimeOfDay;
-                if (now >= marketCloseTime)
-                {
-                    Log.Information("Market now closed!");
-                    break;
-                }
-                else if (now <= marketOpenTime)
-                {
-                    Log.Warning("Market not open yet!");
-                    // Or, wait until 9:30am
-                    await Task.Delay(30*1000, stoppingToken);
-
-                    continue;
-                }
-
-                IList<Position> livePositions;
-                IList<PositionDelta> deltas = new List<PositionDelta>();
-
-                try
-                {
-                    // TODO
-                    //if (await LivePortfolioClient.HasPortfolioChanged())
-                    //{
-                    //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-                    //}
-                    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-                    await LivePortfolioClient.HasPortfolioChanged(deltas.Count > 0);
-                    //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
-
-                    invalidCount = 0;
-                }
-                catch (InvalidPortfolioStateException ex)
-                {
-                    invalidCount++;
-
-                    if (invalidCount == 2)
-                    {
-                        Log.Error("Portfolio found invalid {InvalidCount} times", invalidCount);
-                    } else if (invalidCount > 2)
-                    {
-                        Log.Fatal("Portfolio found invalid {InvalidCount} times", invalidCount);
-                        break;
-                    }
-                    await LivePortfolioClient.Login();
-
-                    continue;
-                }
-
-                foreach (PositionDelta delta in deltas)
-                {
-                    Order? order = OrderManager.DecideOrder(delta);
-                    if (order != null)
-                    {
-                        BrokerClient.PlaceOrder(order);
-                    }
-                }
-                await Task.Delay(30*1000, stoppingToken);
-            }
-
-            _hostApplicationLifetime.StopApplication();
-        }
-    }
-}

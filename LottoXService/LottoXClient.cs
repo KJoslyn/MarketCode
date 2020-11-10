@@ -46,7 +46,7 @@ namespace LottoXService
             return loginResult;
         }
 
-        public override async Task<bool> HasPortfolioChanged(bool? groundTruthChanged)
+        public override async Task<bool> HavePositionsChanged(bool? groundTruthChanged)
         {
             if (await HasHeaderChanged())
             {
@@ -59,7 +59,12 @@ namespace LottoXService
             return QuantityConsistencyClient.TestAndSetCurrentImage(filepath, groundTruthChanged);
         }
 
-        protected override async Task<IList<Position>> GetLivePositions()
+        public override Task<bool> HaveOrdersChanged(bool? groundTruthChanged)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override async Task<IList<Position>> RecognizeLivePositions()
         {
             Log.Information("Getting live positions");
             string filepath = GetNextPortfolioFilepath();
@@ -69,6 +74,11 @@ namespace LottoXService
             //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json"
             //    );
             return positions;
+        }
+
+        protected override Task<IList<FilledOrder>> RecognizeLiveOrders()
+        {
+            throw new System.NotImplementedException();
         }
 
         private async Task<bool> HasHeaderChanged()

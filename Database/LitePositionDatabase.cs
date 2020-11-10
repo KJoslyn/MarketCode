@@ -28,16 +28,6 @@ namespace Database
             return _db.GetCollection<PositionDelta>().FindAll().ToList();
         }
 
-        public override void UpdatePositionsAndDeltas(IList<Position> livePositions, IList<PositionDelta> positionDeltas)
-        {
-            if (positionDeltas.Count > 0)
-            {
-                _db.GetCollection<Position>().DeleteAll();
-                _db.GetCollection<Position>().InsertBulk(livePositions);
-                _db.GetCollection<PositionDelta>().InsertBulk(positionDeltas);
-            }
-        }
-
         public override void InsertDelta(PositionDelta delta)
         {
             _db.GetCollection<PositionDelta>().Insert(delta);
@@ -45,7 +35,7 @@ namespace Database
 
         public override void InsertPosition(Position position)
         {
-            Position currentPos = _db.GetCollection<Position>().FindOne(pos => pos.Symbol == position.Symbol);
+            Position? currentPos = GetPosition(position.Symbol);
             if (currentPos != null)
             {
                 Exception ex = new PositionDatabaseException("Cannot insert position since one already exists");
@@ -58,6 +48,39 @@ namespace Database
         public override void DeletePosition(Position position)
         {
             _db.GetCollection<Position>().DeleteMany(pos => pos.Symbol == position.Symbol);
+        }
+
+        public override IList<FilledOrder> GetStoredOrders()
+        {
+            return _db.GetCollection<FilledOrder>().FindAll().ToList();
+        }
+
+        protected override bool OrderAlreadyExists(FilledOrder order)
+        {
+            FilledOrder existingOrder = _db.GetCollection<FilledOrder>()
+                .FindOne(o => o.Time == order.Time && o.Symbol == order.Symbol);
+            return existingOrder != null;
+        }
+
+        protected override Position? GetPosition(string symbol)
+        {
+            return _db.GetCollection<Position>().FindOne(pos => pos.Symbol == symbol);
+        }
+
+        protected override void InsertOrders(IList<FilledOrder> orders)
+        {
+            _db.GetCollection<FilledOrder>().InsertBulk(orders);
+        }
+
+        public override void UpdateAllPositions(IList<Position> positions)
+        {
+            _db.GetCollection<Position>().DeleteAll();
+            _db.GetCollection<Position>().InsertBulk(positions);
+        }
+
+        public override void InsertDeltas(IList<PositionDelta> deltas)
+        {
+            _db.GetCollection<PositionDelta>().InsertBulk(deltas);
         }
     }
 }
