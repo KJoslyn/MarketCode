@@ -76,9 +76,14 @@ namespace LottoXService
             return positions;
         }
 
-        protected override Task<IList<FilledOrder>> RecognizeLiveOrders()
+        protected override async Task<IList<FilledOrder>> RecognizeLiveOrders()
         {
-            throw new System.NotImplementedException();
+            //string filepath = GetNextOrdersFilepath();
+            //await TakeOrdersScreenshot(filepath);
+            //string ff = GetNextTopOrderFilepath();
+            //await TakeTopOrderScreenshot(ff);
+            IList<FilledOrder> orders = await ImageToPositionsConverter.GetFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-153.png");
+            return orders; 
         }
 
         private async Task<bool> HasHeaderChanged()
@@ -102,6 +107,18 @@ namespace LottoXService
             return numbers.Max();
         }
 
+        private string GetNextOrdersFilepath()
+        {
+            int current = getCurrentHeaderScreenshotNumber();
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-" + current + ".png";
+        }
+
+        private string GetNextTopOrderFilepath()
+        {
+            int current = getCurrentHeaderScreenshotNumber();
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/toporder-" + current + ".png";
+        }
+
         private string GetNextHeaderFilepath()
         {
             int next = getCurrentHeaderScreenshotNumber() + 1;
@@ -120,6 +137,19 @@ namespace LottoXService
             return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-" + current + ".png";
         }
 
+        private async Task TakeTopOrderScreenshot(string filepath)
+        {
+            Page page = await GetPage();
+            await page.ScreenshotAsync(filepath,
+                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 60, X = 1000, Y = 480 } });
+        }
+
+        private async Task TakeOrdersScreenshot(string filepath)
+        {
+            Page page = await GetPage();
+            await page.ScreenshotAsync(filepath,
+                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 1000, X = 1000 } });
+        }
 
         private async Task TakeHeaderScreenshot(string filepath)
         {

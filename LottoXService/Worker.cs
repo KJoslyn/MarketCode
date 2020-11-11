@@ -99,15 +99,15 @@ namespace LottoXService
                 if (now >= marketCloseTime)
                 {
                     Log.Information("Market now closed!");
-                    break;
+                    //break;
                 }
                 else if (now <= marketOpenTime)
                 {
-                    Log.Warning("Market not open yet!");
-                    // Or, wait until 9:30am
-                    await Task.Delay(30*1000, stoppingToken);
+                    //Log.Warning("Market not open yet!");
+                    //// Or, wait until 9:30am
+                    //await Task.Delay(30*1000, stoppingToken);
 
-                    continue;
+                    //continue;
                 }
 
                 IList<PositionDelta> deltas = new List<PositionDelta>();
@@ -120,6 +120,9 @@ namespace LottoXService
                     //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
                     //}
                     deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
+
+                    break;
+
                     await LivePortfolioClient.HaveOrdersChanged(deltas.Count > 0);
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 

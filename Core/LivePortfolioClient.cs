@@ -29,7 +29,8 @@ namespace Core
         public async Task<IList<PositionDelta>> GetLiveDeltasFromOrders()
         {
             IList<FilledOrder> filledOrders = await RecognizeLiveOrders();
-            return PositionDB.ComputeDeltasAndUpdateTables(filledOrders);
+            return null;
+            //return PositionDB.ComputeDeltasAndUpdateTables(filledOrders);
         }
 
         // This does update the database so that the deltas remain accurate.
