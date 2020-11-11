@@ -6,8 +6,8 @@ namespace Core.Model
 {
     public class Position
     {
-        private static Regex _callRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}C\d+");
-        private static Regex _putRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}P\d+");
+        private static Regex _callRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}C\d+(.\d+)?");
+        private static Regex _putRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}P\d+(.\d+)?");
 
         public Position(string symbol, float longQuantity, float averagePrice) : this()
         {

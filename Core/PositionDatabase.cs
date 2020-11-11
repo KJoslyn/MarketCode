@@ -1,5 +1,6 @@
 ﻿using Core.Model;
 using Core.Model.Constants;
+using Serilog;
 using System.Collections.Generic;
 using System.Linq;
 #nullable enable
@@ -14,7 +15,7 @@ namespace Core
 
         public abstract IList<FilledOrder> GetStoredOrders();
 
-        protected abstract void InsertOrders(IList<FilledOrder> orders);
+        public abstract void InsertOrders(IList<FilledOrder> orders);
 
         public abstract void InsertDelta(PositionDelta delta);
 
@@ -43,14 +44,17 @@ namespace Core
                 {
                     if (order.Instruction == InstructionType.SELL_TO_CLOSE)
                     {
-                        // Warning
+                        PositionDatabaseException ex = new PositionDatabaseException("No existing position corresponding to sell order");
+                        Log.Fatal("No existing position corresponding to sell order {@Order}- Symbol {Symbol}", order, order.Symbol);
+                        throw ex;
                     }
                     PositionDelta delta = new PositionDelta(
                         DeltaType.NEW, 
                         order.Symbol, 
                         order.Quantity, 
                         order.Price, 
-                        0);
+                        0,
+                        order.Time);
                     deltas.Add(delta);
 
                     Position newPos = new Position(order.Symbol, order.Quantity, order.Price);
@@ -63,7 +67,8 @@ namespace Core
                         order.Symbol,
                         order.Quantity,
                         order.Price,
-                        order.Quantity / oldPos.LongQuantity);
+                        order.Quantity / oldPos.LongQuantity,
+                        order.Time);
                     deltas.Add(delta);
 
                     DeletePosition(oldPos);
@@ -80,7 +85,8 @@ namespace Core
                         order.Symbol,
                         order.Quantity,
                         order.Price,
-                        order.Quantity / oldPos.LongQuantity);
+                        order.Quantity / oldPos.LongQuantity,
+                        order.Time);
                     deltas.Add(delta);
 
                     DeletePosition(oldPos);

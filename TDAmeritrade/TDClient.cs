@@ -59,7 +59,7 @@ namespace TDAmeritrade
 
         public OptionQuote GetQuote(string symbol)
         {
-            Regex optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+)");
+            Regex optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+(.\d+)?)");
             GroupCollection matchGroups = optionSymbolRegex.Match(symbol).Groups;
             string equitySymbol = matchGroups[1].Value;
             string date = DateTime.ParseExact(matchGroups[2].Value, "yyMMdd", CultureInfo.InvariantCulture)

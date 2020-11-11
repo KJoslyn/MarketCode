@@ -92,6 +92,7 @@ namespace LottoXService
             TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
 
             int invalidCount = 0;
+            int unexpectedErrorCount = 0;
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -120,13 +121,20 @@ namespace LottoXService
                     //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
                     //}
                     deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
-
-                    break;
-
                     await LivePortfolioClient.HaveOrdersChanged(deltas.Count > 0);
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 
+                    foreach (PositionDelta delta in deltas)
+                    {
+                        Order? order = OrderManager.DecideOrder(delta);
+                        if (order != null)
+                        {
+                            BrokerClient.PlaceOrder(order);
+                        }
+                    }
+
                     invalidCount = 0;
+                    unexpectedErrorCount = 0;
                 }
                 catch (InvalidPortfolioStateException ex)
                 {
@@ -144,15 +152,25 @@ namespace LottoXService
 
                     continue;
                 }
-
-                foreach (PositionDelta delta in deltas)
+                catch (PositionDatabaseException ex)
                 {
-                    Order? order = OrderManager.DecideOrder(delta);
-                    if (order != null)
+                    //Assume the exception is already logged
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    unexpectedErrorCount++;
+
+                    if (unexpectedErrorCount < 2)
                     {
-                        BrokerClient.PlaceOrder(order);
+                        Log.Error(ex, "Unexpected error: count = {ErrorCount}", unexpectedErrorCount);
+                    } else if (unexpectedErrorCount > 2)
+                    {
+                        Log.Fatal(ex, "Unexpected error: count = {ErrorCount}", unexpectedErrorCount);
+                        break;
                     }
                 }
+
                 await Task.Delay(30*1000, stoppingToken);
             }
 

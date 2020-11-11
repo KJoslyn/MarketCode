@@ -61,6 +61,12 @@ namespace Core
                 return null;
             }
 
+            if (delta.Age.TotalMinutes > _config.MinutesUntilBuyOrderExpires)
+            {
+                Log.Warning("New/Add delta expired after {Minutes} minutes for delta {@Delta}. Symbol {Symbol}", delta.Age.TotalMinutes.ToString("0"), delta, delta.Symbol);
+                return null;
+            }
+
             float diff = quote.Mark - delta.Price;
             float absPercent = Math.Abs(diff / delta.Price);
             bool withinHighThreshold = Math.Sign(diff) >= 0 && absPercent <= _config.HighBuyThreshold;
@@ -154,6 +160,10 @@ namespace Core
             {
                 Log.Information("No current position corresponding to delta {@Delta}. Symbol {Symbol}", delta, delta.Symbol);
                 return null;
+            }
+            if (delta.Age.TotalMinutes > _config.MinutesUntilWarnOldSellOrder)
+            {
+                Log.Warning("Sell delta OLD after {Minutes} minutes for delta {@Delta}. Symbol {Symbol}", delta.Age.TotalMinutes.ToString("0"), delta, delta.Symbol);
             }
             int quantity = (int)Math.Ceiling(delta.Percent * currentPos.LongQuantity);
 

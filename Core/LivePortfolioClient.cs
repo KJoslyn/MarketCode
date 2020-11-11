@@ -1,4 +1,5 @@
 ﻿using Core.Model;
+using Core.Model.Constants;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -9,6 +10,16 @@ namespace Core
         public LivePortfolioClient(PositionDatabase positionDB)
         {
             PositionDB = positionDB;
+
+            //Position pos = new Position("SFIX_201120C39", 50, (float)0.90);
+            //PositionDB.InsertPosition(pos);
+            //Position pos2 = new Position("WKHS_201120C20", 30, (float)1.34);
+            //PositionDB.InsertPosition(pos);
+
+            //List<FilledOrder> orders = new List<FilledOrder>();
+            //FilledOrder order = new FilledOrder("U_201120C120", (float)3.24, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 10, new System.DateTime(2020, 11, 11, 9, 45, 14));
+            //orders.Add(order);
+            //PositionDB.InsertOrders(orders);
         }
 
         private PositionDatabase PositionDB { get; init; }
@@ -29,8 +40,7 @@ namespace Core
         public async Task<IList<PositionDelta>> GetLiveDeltasFromOrders()
         {
             IList<FilledOrder> filledOrders = await RecognizeLiveOrders();
-            return null;
-            //return PositionDB.ComputeDeltasAndUpdateTables(filledOrders);
+            return PositionDB.ComputeDeltasAndUpdateTables(filledOrders);
         }
 
         // This does update the database so that the deltas remain accurate.

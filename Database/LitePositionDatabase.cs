@@ -39,7 +39,7 @@ namespace Database
             if (currentPos != null)
             {
                 Exception ex = new PositionDatabaseException("Cannot insert position since one already exists");
-                Log.Error(ex, "Tried to insert {@Position} but one already exists in the database: {@CurrentPosition}", position, currentPos);
+                Log.Fatal(ex, "Tried to insert {@Position} but one already exists in the database: {@CurrentPosition}- Symbol {Symbol}", position, currentPos, position.Symbol);
                 throw ex;
             }
             _db.GetCollection<Position>().Insert(position);
@@ -57,8 +57,15 @@ namespace Database
 
         protected override bool OrderAlreadyExists(FilledOrder order)
         {
-            FilledOrder existingOrder = _db.GetCollection<FilledOrder>()
-                .FindOne(o => o.Time == order.Time && o.Symbol == order.Symbol);
+            FilledOrder? existingOrder = null;
+            try
+            {
+                existingOrder = _db.GetCollection<FilledOrder>()
+                    .FindOne(o => o.Time.Equals(order.Time) && o.Symbol == order.Symbol);
+            } catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
             return existingOrder != null;
         }
 
@@ -67,7 +74,7 @@ namespace Database
             return _db.GetCollection<Position>().FindOne(pos => pos.Symbol == symbol);
         }
 
-        protected override void InsertOrders(IList<FilledOrder> orders)
+        public override void InsertOrders(IList<FilledOrder> orders)
         {
             _db.GetCollection<FilledOrder>().InsertBulk(orders);
         }

@@ -18,14 +18,17 @@ namespace LottoXService
         public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PositionDatabase positionDB) : base(rbConfig, positionDB)
         {
             ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
+            ImageToOrdersConverter = new ImageToOrdersConverter(ocrConfig);
             QuantityConsistencyClient = new ImageConsistencyClient();
             HeaderConsistencyClient = new ImageConsistencyClient();
+            OrderConsistencyClient = new ImageConsistencyClient();
         }
 
         private ImageToPositionsConverter ImageToPositionsConverter { get; }
-
+        private ImageToOrdersConverter ImageToOrdersConverter { get; }
         private ImageConsistencyClient QuantityConsistencyClient { get; }
         private ImageConsistencyClient HeaderConsistencyClient { get; }
+        private ImageConsistencyClient OrderConsistencyClient { get; }
 
         // TODO: Remove eventually
         public async Task<IList<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
@@ -56,12 +59,20 @@ namespace LottoXService
             }
             string filepath = GetNextQuantityFilepath();
             await TakeQuantityColumnScreenshot(filepath);
-            return QuantityConsistencyClient.TestAndSetCurrentImage(filepath, groundTruthChanged);
+            return QuantityConsistencyClient.UpdateImageAndCheckHasChanged(filepath, groundTruthChanged);
         }
 
-        public override Task<bool> HaveOrdersChanged(bool? groundTruthChanged)
+        public override async Task<bool> HaveOrdersChanged(bool? groundTruthChanged)
         {
-            throw new System.NotImplementedException();
+            if (await HasHeaderChanged())
+            {
+                InvalidPortfolioStateException ex = new InvalidPortfolioStateException("Header has changed");
+                Log.Information(ex, "Portfolio header has changed!");
+                throw ex;
+            }
+            string filepath = GetNextTopOrderFilepath();
+            await TakeTopOrderScreenshot(filepath);
+            return OrderConsistencyClient.UpdateImageAndCheckHasChanged(filepath, groundTruthChanged);
         }
 
         protected override async Task<IList<Position>> RecognizeLivePositions()
@@ -78,11 +89,10 @@ namespace LottoXService
 
         protected override async Task<IList<FilledOrder>> RecognizeLiveOrders()
         {
-            //string filepath = GetNextOrdersFilepath();
-            //await TakeOrdersScreenshot(filepath);
-            //string ff = GetNextTopOrderFilepath();
-            //await TakeTopOrderScreenshot(ff);
-            IList<FilledOrder> orders = await ImageToPositionsConverter.GetFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-153.png");
+            string filepath = GetNextOrdersFilepath();
+            await TakeOrdersScreenshot(filepath);
+            //IList<FilledOrder> orders = await ImageToOrdersConverter.GetFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-183.png");
+            IList<FilledOrder> orders = await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath);
             return orders; 
         }
 
@@ -90,7 +100,7 @@ namespace LottoXService
         {
             string filepath = GetNextHeaderFilepath();
             await TakeHeaderScreenshot(filepath);
-            return HeaderConsistencyClient.TestAndSetCurrentImage(filepath);
+            return HeaderConsistencyClient.UpdateImageAndCheckHasChanged(filepath);
         }
 
         private int getCurrentHeaderScreenshotNumber()

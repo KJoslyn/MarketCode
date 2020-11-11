@@ -14,5 +14,7 @@ namespace Core
         public string HighBuyStrategy { get; init; } // One of the BuyStrategyType constants
         public float MyPositionMaxSize { get; init; }
         public float LivePortfolioPositionMaxSize { get; init; }
+        public int MinutesUntilBuyOrderExpires { get; init; }
+        public int MinutesUntilWarnOldSellOrder { get; init; }
     }
 }

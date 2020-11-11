@@ -22,7 +22,7 @@ namespace AzureOCR
             LastImage = new Image<Bgr, Byte>(imagePath);
         }
 
-        public bool TestAndSetCurrentImage(string imagePath, bool? groundTruthChanged = null)
+        public bool UpdateImageAndCheckHasChanged(string imagePath, bool? groundTruthChanged = null)
         {
             Image<Bgr, Byte> current = new Image<Bgr, Byte>(imagePath);
 
@@ -48,7 +48,7 @@ namespace AzureOCR
             Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}, GroundTruthChanged: {GroundTruthChanged}: ", imageFile, minValue, groundTruthChanged);
 
             // TODO ????
-            return minValues[0] >= 0.9995;
+            return minValues[0] <= 0.995;
         }
     }
 }

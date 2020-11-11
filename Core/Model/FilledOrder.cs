@@ -27,12 +27,14 @@ namespace Core.Model
             Time = time;
         }
 
-        public string Symbol { get; }
-        public float Price { get; }
-        public string Instruction { get; }
-        public string OrderType { get; }
-        public float Limit { get; }
-        public int Quantity { get; }
-        public DateTime Time { get; }
+        public FilledOrder() { }
+
+        public string Symbol { get; init; }
+        public float Price { get; init; }
+        public string Instruction { get; init; }
+        public string OrderType { get; init; }
+        public float Limit { get; init; }
+        public int Quantity { get; init; }
+        public DateTime Time { get; init; }
     }
 }
