@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 
 namespace Core.Model
 {
@@ -6,6 +7,13 @@ namespace Core.Model
     {
         public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, DateTime? time = null)
         {
+            if (percent > 1)
+            {
+                ArgumentException ex = new ArgumentException("Percent should not be greater than 1!");
+                Log.Fatal(ex, "Percent should not be greater than 1! Symbol = {Symbol}, DeltaType={DeltaType}, Percent={Percent}, Quantity={Quantity}, Price={Price}",
+                    symbol, deltaType, percent.ToString("0.00"), quantity.ToString("0"), Price.ToString("0.00"));
+                throw ex;
+            }
             DeltaType = deltaType;
             Symbol = symbol;
             Quantity = quantity;

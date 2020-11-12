@@ -106,9 +106,18 @@ namespace Core
                 Log.Information("Current mark price not within buy threshold. Skipping order. Symbol {Symbol}, Mark={Mark}", delta.Symbol, quote.Mark.ToString("0.00"));
                 return null;
             }
-            Order order = new Order(delta.Symbol, quantity, InstructionType.BUY_TO_OPEN, orderType, limit);
-            Log.Information("Decided new Order: {@Order} for Symbol {Symbol}", order, order.Symbol);
-            return order;
+
+            if (quantity == 0)
+            {
+                Log.Information("Decided buy quantity of 0. Skipping Order. Symbol {Symbol}, CurrentPosition = {@CurrentPosition}, Delta = {@Delta}",
+                    delta.Symbol, currentPos, delta);
+                return null;
+            } else
+            {
+                Order order = new Order(delta.Symbol, quantity, InstructionType.BUY_TO_OPEN, orderType, limit);
+                Log.Information("Decided new Order: {@Order} for Symbol {Symbol}", order, order.Symbol);
+                return order;
+            }
         }
 
         private int DecideBuyQuantity(float price, PositionDelta delta, Position? currentPos)
