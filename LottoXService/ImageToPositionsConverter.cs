@@ -59,7 +59,7 @@ namespace LottoXService
 
         private List<int> GetSymbolIndices(IList<Line> lines)
         {
-            Regex symbolRegex = new Regex(@"^[A-Z]{1,5} \d{6}[CP]\d+(.\d+)?");
+            Regex symbolRegex = new Regex(@"^[A-Z]{1,5} \d{6}[CP]\d+(.\d)?");
             return lines
                 .Select((line, index) => new { Line = line, Index = index })
                 .Where(obj => symbolRegex.IsMatch(obj.Line.Text))
