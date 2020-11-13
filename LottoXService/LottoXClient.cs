@@ -87,13 +87,13 @@ namespace LottoXService
             return positions;
         }
 
-        protected override async Task<IList<FilledOrder>> RecognizeLiveOrders()
+        // TODO: Remove first part of tuple
+        protected override async Task<(string, IList<FilledOrder>)> RecognizeLiveOrders()
         {
             string filepath = GetNextOrdersFilepath();
             await TakeOrdersScreenshot(filepath);
-            //IList<FilledOrder> orders = await ImageToOrdersConverter.GetFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-183.png");
-            IList<FilledOrder> orders = await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath);
-            return orders; 
+            //IList<FilledOrder> orders = await ImageToOrdersConverter.GetFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-545.png");
+            return await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath);
         }
 
         private async Task<bool> HasHeaderChanged()

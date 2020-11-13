@@ -45,7 +45,13 @@ namespace AzureOCR
             string imageFile = imagePath.Substring(imagePath.LastIndexOf("/") + 1);
             double minValue = Math.Round(minValues[0], 4);
             //Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}", imageFile, minValues[0].ToString("0.0000"));
-            Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}, GroundTruthChanged: {GroundTruthChanged}: ", imageFile, minValue, groundTruthChanged);
+            if (groundTruthChanged != null)
+            {
+                Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}, GroundTruthChanged: {GroundTruthChanged}: ", imageFile, minValue, groundTruthChanged);
+            } else
+            {
+                Log.Information("ImageFile: {ImageFile}, MinValue: {MinValue}", imageFile, minValue);
+            }
 
             // TODO ????
             return minValues[0] <= 0.995;

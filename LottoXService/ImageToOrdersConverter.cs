@@ -21,7 +21,8 @@ namespace LottoXService
 
         public ImageToOrdersConverter(OCRConfig config) : base(config) { }
 
-        public async Task<IList<FilledOrder>> GetFilledOrdersFromImage(string filePath, string writeToJsonPath = null)
+        // TODO: Remove first part of tuple
+        public async Task<(string, IList<FilledOrder>)> GetFilledOrdersFromImage(string filePath, string writeToJsonPath = null)
         {
             IList<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
 
@@ -37,9 +38,24 @@ namespace LottoXService
             }
 
             List<string> orderStrings = GetLottoxOrderStrings(lineTexts);
-            if (orderStrings.Count == 0) return new List<FilledOrder>();
+            //if (orderStrings.Count == 0) return new List<FilledOrder>();
+            if (orderStrings.Count == 0) return (GetFirstNormalizedDateTime(lineTexts), new List<FilledOrder>());
 
-            return CreateFilledOrders(orderStrings);
+            //return CreateFilledOrders(orderStrings));
+            return (GetFirstNormalizedDateTime(lineTexts), CreateFilledOrders(orderStrings));
+        }
+
+        private string GetFirstNormalizedDateTime(List<string> lineTexts)
+        {
+            foreach (string text in lineTexts)
+            {
+                string? normalizedDateTime = TryNormalizeDateTime(text);
+                if (normalizedDateTime != null)
+                {
+                    return normalizedDateTime;
+                }
+            }
+            return "";
         }
 
         private bool ValidateOrderColumnHeaders(List<string> lineTexts)
@@ -135,7 +151,7 @@ namespace LottoXService
                 Match match = regex.Match(orderStr);
                 if (!match.Success)
                 {
-                    Exception ex = new InvalidPortfolioStateException("Could not parse lottoX order!");
+                    Exception ex = new FilledOrderParsingException("Could not parse lottoX order!");
                     Log.Warning(ex, "Could not parse lottoX order. Extracted text: " + orderStr);
                     throw ex;
                 }

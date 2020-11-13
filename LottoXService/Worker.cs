@@ -94,6 +94,8 @@ namespace LottoXService
             int invalidCount = 0;
             int unexpectedErrorCount = 0;
 
+            // TODO: Remove lastTopOrderDateTime
+            string lastTopOrderDateTime = "";
             while (!stoppingToken.IsCancellationRequested)
             {
                 TimeSpan now = DateTime.Now.TimeOfDay;
@@ -120,8 +122,11 @@ namespace LottoXService
                     //{
                     //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
                     //}
-                    deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                    await LivePortfolioClient.HaveOrdersChanged(deltas.Count > 0);
+                    //deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    string topOrderDateTime;
+                    (topOrderDateTime, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    await LivePortfolioClient.HaveOrdersChanged(topOrderDateTime != lastTopOrderDateTime);
+                    lastTopOrderDateTime = topOrderDateTime;
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 
                     foreach (PositionDelta delta in deltas)
