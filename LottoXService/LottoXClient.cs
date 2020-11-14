@@ -151,14 +151,14 @@ namespace LottoXService
         {
             Page page = await GetPage();
             await page.ScreenshotAsync(filepath,
-                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 60, X = 1000, Y = 480 } });
+                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 250, X = 1000, Y = 480 } });
         }
 
         private async Task TakeOrdersScreenshot(string filepath)
         {
             Page page = await GetPage();
             await page.ScreenshotAsync(filepath,
-                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 1000, X = 1000 } });
+                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 983, Height = 1000, X = 1017 } });
         }
 
         private async Task TakeHeaderScreenshot(string filepath)
