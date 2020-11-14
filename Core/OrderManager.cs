@@ -24,7 +24,15 @@ namespace Core
         private IBrokerClient BrokerClient { get; }
         private IMarketDataClient MarketDataClient { get; }
 
-        public Order? DecideOrder(PositionDelta delta)
+        public IList<Order> DecideOrdersTimeSorted(IList<PositionDelta> deltas)
+        {
+            IEnumerable<Order> orders = deltas.OrderBy(delta => delta.Time)
+                .Select(delta => DecideOrder(delta))
+                .OfType<Order>(); // filter out nulls
+            return RemoveBuysIfSellExistsForSameSymbol(orders);
+        }
+
+        private Order? DecideOrder(PositionDelta delta)
         {
             // TODO: Remove after testing
             //Log.Warning("Not getting real quote");
@@ -47,6 +55,28 @@ namespace Core
                 Log.Error("Unrecognized deltaType: {type}", delta.DeltaType);
                 return null;
             }
+        }
+
+        private IList<Order> RemoveBuysIfSellExistsForSameSymbol(IEnumerable<Order> orders)
+        {
+            IList<Order> filteredOrders = orders.ToList();
+            IEnumerable<string> symbols = filteredOrders.Select(order => order.Symbol)
+                .Distinct();
+
+            foreach(string symbol in symbols)
+            {
+                IEnumerable<Order> buyOrders = filteredOrders.Where(order => order.Instruction == InstructionType.BUY_TO_OPEN);
+                Order? firstSellOrder = filteredOrders.Where(order => order.Instruction == InstructionType.SELL_TO_CLOSE).FirstOrDefault();
+                if (firstSellOrder != null)
+                {
+                    foreach (Order buyOrder in buyOrders)
+                    {
+                        Log.Warning("Removing buy order {@BuyOrder} because corresponding sell order exists: {@SellOrder}", buyOrder, firstSellOrder);
+                        filteredOrders.Remove(buyOrder);
+                    }
+                }
+            }
+            return filteredOrders;
         }
 
         private Order? DecideBuy(PositionDelta delta, Position? currentPos, OptionQuote quote)

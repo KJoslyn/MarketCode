@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TDAmeritrade;
@@ -129,13 +130,11 @@ namespace LottoXService
                     lastTopOrderDateTime = topOrderDateTime;
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 
-                    foreach (PositionDelta delta in deltas)
+                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(deltas);
+
+                    foreach (Order order in orders)
                     {
-                        Order? order = OrderManager.DecideOrder(delta);
-                        if (order != null)
-                        {
-                            BrokerClient.PlaceOrder(order);
-                        }
+                        BrokerClient.PlaceOrder(order);
                     }
 
                     invalidCount = 0;
