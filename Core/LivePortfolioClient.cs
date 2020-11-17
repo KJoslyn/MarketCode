@@ -1,6 +1,7 @@
 ﻿using Core.Model;
 using Core.Model.Constants;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Core
@@ -11,29 +12,26 @@ namespace Core
         {
             PositionDB = positionDB;
 
-            Position pos1 = new Position("SFIX_201120C39", 100, (float)0.76);
-            PositionDB.InsertPosition(pos1);
-            Position pos2 = new Position("SPWR_201120C20", 90, (float)0.90);
-            PositionDB.InsertPosition(pos2);
+            //Position pos1 = new Position("CGC_201120C24", 20, (float)0.93);
+            //PositionDB.InsertPosition(pos1);
+            //Position pos2 = new Position("SPWR_201120C20", 30, (float)0.57);
+            //PositionDB.InsertPosition(pos2);
 
-            List<FilledOrder> orders = new List<FilledOrder>();
-            FilledOrder o1 = new FilledOrder("WKHS_201120C20", (float)1.24, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)1.25, 10, new System.DateTime(2020, 11, 12, 10, 03, 29));
-            orders.Add(o1);
-            FilledOrder o2 = new FilledOrder("WKHS_201120C20", (float)1.25, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)1.25, 10, new System.DateTime(2020, 11, 12, 10, 03, 30));
-            orders.Add(o2);
-            FilledOrder o3 = new FilledOrder("WKHS_201120C20", (float)1.60, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 70, new System.DateTime(2020, 11, 12, 10, 31, 30));
-            orders.Add(o3);
-            FilledOrder o4 = new FilledOrder("SPWR_201120C20", (float)0.63, InstructionType.BUY_TO_OPEN, OrderType.MARKET, 0, 20, new System.DateTime(2020, 11, 12, 11, 00, 29));
-            orders.Add(o4);
-            FilledOrder o5 = new FilledOrder("SFIX_201120C39", (float)0.53, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.54, 20, new System.DateTime(2020, 11, 12, 11, 37, 17));
-            orders.Add(o5);
-            FilledOrder o6 = new FilledOrder("SPWR_201120C20", (float)0.84, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.84, 10, new System.DateTime(2020, 11, 12, 12, 11, 07));
-            orders.Add(o6);
-            FilledOrder o7 = new FilledOrder("SPWR_201120C20", (float)0.74, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.74, 10, new System.DateTime(2020, 11, 12, 12, 25, 38));
-            orders.Add(o7);
-            FilledOrder o8 = new FilledOrder("SPWR_201120C20", (float)0.74, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.74, 10, new System.DateTime(2020, 11, 12, 12, 46, 58));
-            orders.Add(o8);
-            PositionDB.InsertOrders(orders);
+            //List<FilledOrder> orders = new List<FilledOrder>();
+            //FilledOrder o1 = new FilledOrder("CGC_201120C25", (float)0.59, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 30, new System.DateTime(2020, 11, 17, 10, 11, 56));
+            //orders.Add(o1);
+            //FilledOrder o2 = new FilledOrder("SFIX_201120C39", (float)0.30, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 5, new System.DateTime(2020, 11, 13, 12, 23, 37));
+            //orders.Add(o2);
+            //FilledOrder o3 = new FilledOrder("SPWR_201120C20", (float)0.55, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 20, new System.DateTime(2020, 11, 13, 12, 31, 13));
+            //orders.Add(o3);
+            //FilledOrder o4 = new FilledOrder("SFIX_201120C39", (float)0.22, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 50, new System.DateTime(2020, 11, 13, 12, 33, 25));
+            //orders.Add(o4);
+            //FilledOrder o5 = new FilledOrder("SPWR_201120C20", (float)0.57, InstructionType.BUY_TO_OPEN, OrderType.MARKET, 0, 30, new System.DateTime(2020, 11, 13, 12, 35, 39));
+            //orders.Add(o5);
+            //FilledOrder o6 = new FilledOrder("CGC_201120C24", (float)1.16, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 20, new System.DateTime(2020, 11, 13, 12, 53, 26));
+            //orders.Add(o6);
+
+            //PositionDB.InsertOrders(orders);
         }
 
         private PositionDatabase PositionDB { get; init; }
@@ -46,6 +44,11 @@ namespace Core
 
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
 
+        protected IList<FilledOrder> GetTodaysFilledOrders()
+        {
+            return PositionDB.GetTodaysFilledOrders();
+        }
+
         // TODO: Remove first part of tuple
         protected abstract Task<(string, IList<FilledOrder>)> RecognizeLiveOrders();
 
@@ -56,7 +59,8 @@ namespace Core
         public async Task<(string, IList<PositionDelta>)> GetLiveDeltasFromOrders()
         {
             (string topOrderDateTime, IList<FilledOrder> filledOrders) = await RecognizeLiveOrders();
-            return (topOrderDateTime, PositionDB.ComputeDeltasAndUpdateTables(filledOrders));
+            IList<FilledOrder> sortedOrders = SortFilledOrdersByTime(filledOrders);
+            return (topOrderDateTime, PositionDB.ComputeDeltasAndUpdateTables(sortedOrders));
         }
 
         // This does update the database so that the deltas remain accurate.
@@ -66,6 +70,11 @@ namespace Core
         {
             IList<Position> livePositions = await RecognizeLivePositions();
             return PositionDB.ComputeDeltasAndUpdateTables(livePositions);
+        }
+
+        private IList<FilledOrder> SortFilledOrdersByTime(IList<FilledOrder> orders)
+        {
+            return orders.ToList().OrderBy(o => o.Time).ToList();
         }
 
         //// This does update the database so that the deltas remain accurate.

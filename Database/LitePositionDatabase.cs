@@ -16,6 +16,9 @@ namespace Database
         public LitePositionDatabase(string dbPath)
         {
             _db = new LiteDatabase(dbPath);
+
+            //TODO REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!
+            //_db.GetCollection<Position>().DeleteMany(pos => pos.DateUpdated.Date == DateTime.Now.Date);
         }
 
         public override IList<Position> GetStoredPositions()
@@ -88,6 +91,11 @@ namespace Database
         public override void InsertDeltas(IList<PositionDelta> deltas)
         {
             _db.GetCollection<PositionDelta>().InsertBulk(deltas);
+        }
+
+        public override IList<FilledOrder> GetTodaysFilledOrders()
+        {
+            return _db.GetCollection<FilledOrder>().Find(order => order.Time.Date == DateTime.Today).ToList();
         }
     }
 }

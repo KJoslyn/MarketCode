@@ -22,7 +22,7 @@ namespace AzureOCR
             LastImage = new Image<Bgr, Byte>(imagePath);
         }
 
-        public bool UpdateImageAndCheckHasChanged(string imagePath, bool? groundTruthChanged = null)
+        public bool UpdateImageAndCheckHasChanged(string imagePath, double threshold = 0.99, bool? groundTruthChanged = null)
         {
             Image<Bgr, Byte> current = new Image<Bgr, Byte>(imagePath);
 
@@ -54,7 +54,7 @@ namespace AzureOCR
             }
 
             // TODO ????
-            return minValues[0] <= 0.995;
+            return minValues[0] <= threshold;
         }
     }
 }

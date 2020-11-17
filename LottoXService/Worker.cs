@@ -103,7 +103,7 @@ namespace LottoXService
                 if (now >= marketCloseTime)
                 {
                     Log.Information("Market now closed!");
-                    //break;
+                    break;
                 }
                 else if (now <= marketOpenTime)
                 {
@@ -119,15 +119,24 @@ namespace LottoXService
                 try
                 {
                     // TODO
-                    //if (await LivePortfolioClient.HasPortfolioChanged())
-                    //{
-                    //    (livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-                    //}
+                    if (await LivePortfolioClient.HaveOrdersChanged(null))
+                    {
+                        Log.Information("***Change in top orders detected- getting live orders");
+                        string unused;
+                        (unused, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    }
+
                     //deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                    string topOrderDateTime;
-                    (topOrderDateTime, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                    await LivePortfolioClient.HaveOrdersChanged(topOrderDateTime != lastTopOrderDateTime);
-                    lastTopOrderDateTime = topOrderDateTime;
+
+
+                    //string topOrderDateTime;
+                    //(topOrderDateTime, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    //await LivePortfolioClient.HaveOrdersChanged(topOrderDateTime != lastTopOrderDateTime);
+                    //lastTopOrderDateTime = topOrderDateTime;
+
+                    //await LivePortfolioClient.HaveOrdersChanged(true);
+
+
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 
                     IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(deltas);
@@ -175,7 +184,7 @@ namespace LottoXService
                     }
                 }
 
-                await Task.Delay(30*1000, stoppingToken);
+                await Task.Delay(15*1000, stoppingToken);
             }
 
             _hostApplicationLifetime.StopApplication();

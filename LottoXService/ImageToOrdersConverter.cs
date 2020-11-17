@@ -22,7 +22,7 @@ namespace LottoXService
         public ImageToOrdersConverter(OCRConfig config) : base(config) { }
 
         // TODO: Remove first part of tuple
-        public async Task<(string, IList<FilledOrder>)> GetFilledOrdersFromImage(string filePath, string writeToJsonPath = null)
+        public async Task<(string, IList<FilledOrder>)> GetNewFilledOrdersFromImage(string filePath, IList<FilledOrder> ignoreList, string writeToJsonPath = null)
         {
             IList<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
 
@@ -37,7 +37,7 @@ namespace LottoXService
                 throw ex;
             }
 
-            List<string> orderStrings = GetLottoxOrderStrings(lineTexts);
+            List<string> orderStrings = GetLottoxOrderStrings(lineTexts, ignoreList);
             //if (orderStrings.Count == 0) return new List<FilledOrder>();
             if (orderStrings.Count == 0) return (GetFirstNormalizedDateTime(lineTexts), new List<FilledOrder>());
 
@@ -78,10 +78,13 @@ namespace LottoXService
         /// Due to the potential irregularity in where spaces occur, we simply concatenate all parts of a particular order here and leave it
         /// to another function to split out the parts of the order and determine whether the order's format is valid.
         /// </summary>
-        private List<string> GetLottoxOrderStrings(List<string> lineTexts)
+        private List<string> GetLottoxOrderStrings(List<string> lineTexts, IList<FilledOrder> ignoreFilledOrders)
         {
+            IList<(string, DateTime)> ignoreList = ignoreFilledOrders.Select(order => (order.Symbol, order.Time)).ToList();
+
             List<string> orderStrings = new List<string>();
             string thisOrderStr = "";
+            string thisOrderSymbol = "";
             bool isLTX = false;
             foreach (string text in lineTexts)
             {
@@ -89,16 +92,22 @@ namespace LottoXService
                 if (normalizedOptionSymbol != null)
                 {
                     thisOrderStr = normalizedOptionSymbol;
+                    thisOrderSymbol = normalizedOptionSymbol;
                     continue;
                 }
 
-                string? normalizedDateTime = TryNormalizeDateTime(text);
-                if (normalizedDateTime != null)
+                string? normalizedDateTimeStr = TryNormalizeDateTime(text);
+                if (normalizedDateTimeStr != null)
                 {
                     if (isLTX)
                     {
-                        thisOrderStr += " " + normalizedDateTime;
-                        orderStrings.Add(thisOrderStr);
+                        DateTime dateTime = DateTime.Parse(normalizedDateTimeStr);
+                        (string, DateTime) orderSymbolAndTime = (thisOrderSymbol, dateTime);
+                        if (!ignoreList.Contains(orderSymbolAndTime))
+                        {
+                            thisOrderStr += " " + normalizedDateTimeStr;
+                            orderStrings.Add(thisOrderStr);
+                        }
                         isLTX = false;
                     }
                     continue;

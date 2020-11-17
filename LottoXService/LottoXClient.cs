@@ -59,7 +59,7 @@ namespace LottoXService
             }
             string filepath = GetNextQuantityFilepath();
             await TakeQuantityColumnScreenshot(filepath);
-            return QuantityConsistencyClient.UpdateImageAndCheckHasChanged(filepath, groundTruthChanged);
+            return QuantityConsistencyClient.UpdateImageAndCheckHasChanged(filepath, 0.99, groundTruthChanged);
         }
 
         public override async Task<bool> HaveOrdersChanged(bool? groundTruthChanged)
@@ -72,7 +72,7 @@ namespace LottoXService
             }
             string filepath = GetNextTopOrderFilepath();
             await TakeTopOrderScreenshot(filepath);
-            return OrderConsistencyClient.UpdateImageAndCheckHasChanged(filepath, groundTruthChanged);
+            return OrderConsistencyClient.UpdateImageAndCheckHasChanged(filepath, 0.99, groundTruthChanged);
         }
 
         protected override async Task<IList<Position>> RecognizeLivePositions()
@@ -92,8 +92,11 @@ namespace LottoXService
         {
             string filepath = GetNextOrdersFilepath();
             await TakeOrdersScreenshot(filepath);
-            //IList<FilledOrder> orders = await ImageToOrdersConverter.GetFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-545.png");
-            return await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath);
+            IList<FilledOrder> todaysFilledOrders = GetTodaysFilledOrders();
+            return await ImageToOrdersConverter.GetNewFilledOrdersFromImage(filepath, todaysFilledOrders);
+
+            //IList<FilledOrder> todaysFilledOrders = GetTodaysFilledOrders();
+            //return await ImageToOrdersConverter.GetNewFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-1121.png", todaysFilledOrders);
         }
 
         private async Task<bool> HasHeaderChanged()
@@ -151,14 +154,14 @@ namespace LottoXService
         {
             Page page = await GetPage();
             await page.ScreenshotAsync(filepath,
-                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 250, X = 1000, Y = 480 } });
+                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 1000, Height = 400, X = 1000, Y = 350 } });
         }
 
         private async Task TakeOrdersScreenshot(string filepath)
         {
             Page page = await GetPage();
             await page.ScreenshotAsync(filepath,
-                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 983, Height = 1000, X = 1017 } });
+                new ScreenshotOptions { Clip = new PuppeteerSharp.Media.Clip { Width = 983, Height = 1440, X = 1017 } });
         }
 
         private async Task TakeHeaderScreenshot(string filepath)

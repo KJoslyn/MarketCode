@@ -1,6 +1,7 @@
 ﻿using Core.Model;
 using Core.Model.Constants;
 using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 #nullable enable
@@ -26,6 +27,8 @@ namespace Core
         public abstract void UpdateAllPositions(IList<Position> positions);
 
         public abstract void DeletePosition(Position position);
+
+        public abstract IList<FilledOrder> GetTodaysFilledOrders();
 
         protected abstract bool OrderAlreadyExists(FilledOrder order);
 
