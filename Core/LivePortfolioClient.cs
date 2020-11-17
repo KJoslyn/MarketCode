@@ -34,7 +34,7 @@ namespace Core
             //PositionDB.InsertOrders(orders);
         }
 
-        private PositionDatabase PositionDB { get; init; }
+        protected PositionDatabase PositionDB { get; init; }
 
         public abstract Task<bool> Login();
 
@@ -43,11 +43,6 @@ namespace Core
         public abstract Task<bool> HavePositionsChanged(bool? groundTruthChanged);
 
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
-
-        protected IList<FilledOrder> GetTodaysFilledOrders()
-        {
-            return PositionDB.GetTodaysFilledOrders();
-        }
 
         // TODO: Remove first part of tuple
         protected abstract Task<(string, IList<FilledOrder>)> RecognizeLiveOrders();

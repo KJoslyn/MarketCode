@@ -90,13 +90,17 @@ namespace LottoXService
         // TODO: Remove first part of tuple
         protected override async Task<(string, IList<FilledOrder>)> RecognizeLiveOrders()
         {
-            string filepath = GetNextOrdersFilepath();
-            await TakeOrdersScreenshot(filepath);
-            IList<FilledOrder> todaysFilledOrders = GetTodaysFilledOrders();
-            return await ImageToOrdersConverter.GetNewFilledOrdersFromImage(filepath, todaysFilledOrders);
+            IList<FilledOrder> todaysFilledOrders = PositionDB.GetTodaysFilledOrders();
+            IList<string> currentPositionSymbols = PositionDB.GetStoredPositions().Select(pos => pos.Symbol).ToList();
 
-            //IList<FilledOrder> todaysFilledOrders = GetTodaysFilledOrders();
-            //return await ImageToOrdersConverter.GetNewFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-1121.png", todaysFilledOrders);
+            //string filepath = GetNextOrdersFilepath();
+            //await TakeOrdersScreenshot(filepath);
+            //IList<FilledOrder> todaysFilledOrders = PositionDB.GetTodaysFilledOrders();
+            //return await ImageToOrdersConverter.GetNewFilledOrdersFromImage(filepath, todaysFilledOrders, currentPositionSymbols);
+
+            return await ImageToOrdersConverter.GetNewFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-2219.png", 
+                todaysFilledOrders, 
+                currentPositionSymbols);
         }
 
         private async Task<bool> HasHeaderChanged()

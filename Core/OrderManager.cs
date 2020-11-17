@@ -97,6 +97,12 @@ namespace Core
                 return null;
             }
 
+            if (delta.Price > _config.MaxBuyPrice)
+            {
+                Log.Warning("Buy price higher than buy max limit. Skipping order. Symbol {Symbol}, Price={Price}", delta.Symbol, delta.Price);
+                return null;
+            }
+
             float diff = quote.Mark - delta.Price;
             float absPercent = Math.Abs(diff / delta.Price);
             bool withinHighThreshold = Math.Sign(diff) >= 0 && absPercent <= _config.HighBuyThreshold;

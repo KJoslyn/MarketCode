@@ -16,5 +16,6 @@ namespace Core
         public float LivePortfolioPositionMaxSize { get; init; }
         public int MinutesUntilBuyOrderExpires { get; init; }
         public int MinutesUntilWarnOldSellOrder { get; init; }
+        public double MaxBuyPrice { get; init; }
     }
 }
