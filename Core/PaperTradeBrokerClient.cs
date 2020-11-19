@@ -25,11 +25,11 @@ namespace Core
 
         public Position? GetPosition(string symbol)
         {
-            IList<Position> positions = GetPositions();
+            IEnumerable<Position> positions = GetPositions();
             return positions.Where(pos => pos.Symbol == symbol).FirstOrDefault();
         }
 
-        public IList<Position> GetPositions()
+        public IEnumerable<Position> GetPositions()
         {
             return PositionDB.GetStoredPositions();
         }

@@ -21,14 +21,14 @@ namespace Database
             //_db.GetCollection<Position>().DeleteMany(pos => pos.DateUpdated.Date == DateTime.Now.Date);
         }
 
-        public override IList<Position> GetStoredPositions()
+        public override IEnumerable<Position> GetStoredPositions()
         {
-            return _db.GetCollection<Position>().FindAll().ToList();
+            return _db.GetCollection<Position>().FindAll();
         }
 
-        public override IList<PositionDelta> GetStoredDeltas()
+        public override TimeSortedSet<PositionDelta> GetStoredDeltas()
         {
-            return _db.GetCollection<PositionDelta>().FindAll().ToList();
+            return new TimeSortedSet<PositionDelta>(_db.GetCollection<PositionDelta>().FindAll());
         }
 
         public override void InsertDelta(PositionDelta delta)
@@ -53,9 +53,10 @@ namespace Database
             _db.GetCollection<Position>().DeleteMany(pos => pos.Symbol == position.Symbol);
         }
 
-        public override IList<FilledOrder> GetStoredOrders()
+        public override TimeSortedSet<FilledOrder> GetStoredOrders()
         {
-            return _db.GetCollection<FilledOrder>().FindAll().ToList();
+            IEnumerable<FilledOrder> orders = _db.GetCollection<FilledOrder>().FindAll();
+            return new TimeSortedSet<FilledOrder>(orders);
         }
 
         protected override bool OrderAlreadyExists(FilledOrder order)
@@ -77,25 +78,33 @@ namespace Database
             return _db.GetCollection<Position>().FindOne(pos => pos.Symbol == symbol);
         }
 
-        public override void InsertOrders(IList<FilledOrder> orders)
+        public override void InsertOrders(IEnumerable<FilledOrder> orders)
         {
             _db.GetCollection<FilledOrder>().InsertBulk(orders);
         }
 
-        public override void UpdateAllPositions(IList<Position> positions)
+        public override void UpdateAllPositions(IEnumerable<Position> positions)
         {
             _db.GetCollection<Position>().DeleteAll();
             _db.GetCollection<Position>().InsertBulk(positions);
         }
 
-        public override void InsertDeltas(IList<PositionDelta> deltas)
+        public override void InsertDeltas(IEnumerable<PositionDelta> deltas)
         {
             _db.GetCollection<PositionDelta>().InsertBulk(deltas);
         }
 
-        public override IList<FilledOrder> GetTodaysFilledOrders()
+        public override TimeSortedSet<FilledOrder> GetTodaysFilledOrders()
         {
-            return _db.GetCollection<FilledOrder>().Find(order => order.Time.Date == DateTime.Today).ToList();
+            return new TimeSortedSet<FilledOrder>(_db.GetCollection<FilledOrder>().Find(order => order.Time.Date == DateTime.Today));
+        }
+
+        public override void DeleteOrders(IEnumerable<FilledOrder> orders)
+        {
+            foreach(FilledOrder order in orders)
+            {
+                _db.GetCollection<FilledOrder>().DeleteMany(o => o.StrictEquals(order));
+            }
         }
     }
 }

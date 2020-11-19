@@ -87,8 +87,8 @@ namespace LottoXService
                 Log.Information("Market closed today");
                 return;
             }
-            Log.Information("NOT LOGGING IN");
-            //await LivePortfolioClient.Login();
+            //Log.Information("NOT LOGGING IN");
+            await LivePortfolioClient.Login();
 
             TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
             TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
@@ -104,8 +104,8 @@ namespace LottoXService
                 if (now >= marketCloseTime)
                 {
                     Log.Information("Market now closed!");
-                    Log.Information("NOT BREAKING ON MARKET CLOSED");
-                    //break;
+                    //Log.Information("NOT BREAKING ON MARKET CLOSED");
+                    break;
                 }
                 else if (now <= marketOpenTime)
                 {
@@ -116,18 +116,17 @@ namespace LottoXService
                     //continue;
                 }
 
-                IList<PositionDelta> deltas = new List<PositionDelta>();
+                TimeSortedSet<PositionDelta> deltas = new TimeSortedSet<PositionDelta>();
 
                 try
                 {
-                    Log.Information("NOT CHECKING HEADERS");
-                    // TODO
-                    //if (await LivePortfolioClient.HaveOrdersChanged(null))
-                    //{
-                    //    Log.Information("***Change in top orders detected- getting live orders");
+                    //Log.Information("NOT CHECKING HEADERS");
+                    if (await LivePortfolioClient.HaveOrdersChanged(null))
+                    {
+                        Log.Information("***Change in top orders detected- getting live orders");
                         string unused;
                         (unused, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                    //}
+                    }
 
                     //deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
 

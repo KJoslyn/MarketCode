@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Core.Model
 {
-    public class FilledOrder
+    public class FilledOrder : HasTime
     {
         public FilledOrder(string symbol, float price, string instruction, string orderType, float limit, int quantity, DateTime time)
         {
@@ -36,5 +36,21 @@ namespace Core.Model
         public float Limit { get; init; }
         public int Quantity { get; init; }
         public DateTime Time { get; init; }
+
+        public bool EqualsIgnoreTime(FilledOrder other)
+        {
+            return Symbol == other.Symbol &&
+                Price == other.Price &&
+                Instruction == other.Instruction &&
+                OrderType == other.OrderType &&
+                Limit == other.Limit &&
+                Quantity == other.Quantity;
+        }
+
+        public bool StrictEquals(FilledOrder other)
+        {
+            return EqualsIgnoreTime(other) &&
+                Time == other.Time;
+        }
     }
 }

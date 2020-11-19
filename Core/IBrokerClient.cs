@@ -6,7 +6,7 @@ namespace Core
 {
     public interface IBrokerClient
     {
-        public IList<Position> GetPositions();
+        public IEnumerable<Position> GetPositions();
         public Position? GetPosition(string symbol);
         public void PlaceOrder(Order order);
     }

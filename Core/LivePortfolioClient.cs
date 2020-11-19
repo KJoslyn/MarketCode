@@ -1,8 +1,7 @@
 ﻿using Core.Model;
-using Core.Model.Constants;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+#nullable enable
 
 namespace Core
 {
@@ -12,9 +11,10 @@ namespace Core
         {
             PositionDB = positionDB;
 
-            //Position pos1 = new Position("CGC_201120C24", 20, (float)0.93);
+            //Log.Information("INSERTING POSITIONS");
+            //Position pos1 = new Position("SFIX_201120C36", 40, (float)0.68);
             //PositionDB.InsertPosition(pos1);
-            //Position pos2 = new Position("SPWR_201120C20", 30, (float)0.57);
+            //Position pos2 = new Position("SPWR_201120C20", 70, (float)0.59);
             //PositionDB.InsertPosition(pos2);
 
             //List<FilledOrder> orders = new List<FilledOrder>();
@@ -45,17 +45,17 @@ namespace Core
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
 
         // TODO: Remove first part of tuple
-        protected abstract Task<(string, IList<FilledOrder>)> RecognizeLiveOrders();
+        protected abstract Task<(string, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders();
 
         // This does not update the database, but the method is not public.
         protected abstract Task<IList<Position>> RecognizeLivePositions();
 
         // TODO: Remove first part of tuple
-        public async Task<(string, IList<PositionDelta>)> GetLiveDeltasFromOrders()
+        public async Task<(string, TimeSortedSet<PositionDelta>)> GetLiveDeltasFromOrders()
         {
-            (string topOrderDateTime, IList<FilledOrder> filledOrders) = await RecognizeLiveOrders();
-            IList<FilledOrder> sortedOrders = SortFilledOrdersByTime(filledOrders);
-            return (topOrderDateTime, PositionDB.ComputeDeltasAndUpdateTables(sortedOrders));
+            (string topOrderDateTime, TimeSortedSet<FilledOrder> filledOrders) = await RecognizeLiveOrders();
+            FilledOrderMatchResult result = PositionDB.MatchOrdersAndUpdateTables(filledOrders, 10);
+            return (topOrderDateTime, PositionDB.ComputeDeltasAndUpdateTables(result.NewFilledOrders));
         }
 
         // This does update the database so that the deltas remain accurate.
@@ -65,11 +65,6 @@ namespace Core
         {
             IList<Position> livePositions = await RecognizeLivePositions();
             return PositionDB.ComputeDeltasAndUpdateTables(livePositions);
-        }
-
-        private IList<FilledOrder> SortFilledOrdersByTime(IList<FilledOrder> orders)
-        {
-            return orders.ToList().OrderBy(o => o.Time).ToList();
         }
 
         //// This does update the database so that the deltas remain accurate.

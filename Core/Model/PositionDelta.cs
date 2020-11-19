@@ -3,7 +3,7 @@ using System;
 
 namespace Core.Model
 {
-    public class PositionDelta
+    public class PositionDelta : HasTime
     {
         public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, DateTime? time = null)
         {

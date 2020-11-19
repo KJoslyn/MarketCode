@@ -24,10 +24,9 @@ namespace Core
         private IBrokerClient BrokerClient { get; }
         private IMarketDataClient MarketDataClient { get; }
 
-        public IList<Order> DecideOrdersTimeSorted(IList<PositionDelta> deltas)
+        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedSet<PositionDelta> deltas)
         {
-            IEnumerable<Order> orders = deltas.OrderBy(delta => delta.Time)
-                .Select(delta => DecideOrder(delta))
+            IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta))
                 .OfType<Order>(); // filter out nulls
             return RemoveBuysIfSellExistsForSameSymbol(orders);
         }
@@ -57,7 +56,7 @@ namespace Core
             }
         }
 
-        private IList<Order> RemoveBuysIfSellExistsForSameSymbol(IEnumerable<Order> orders)
+        private IEnumerable<Order> RemoveBuysIfSellExistsForSameSymbol(IEnumerable<Order> orders)
         {
             IList<Order> filteredOrders = orders.ToList();
             IEnumerable<string> symbols = filteredOrders.Select(order => order.Symbol)

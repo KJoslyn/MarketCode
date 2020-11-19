@@ -10,36 +10,82 @@ namespace Core
 {
     public abstract class PositionDatabase
     {
-        public abstract IList<Position> GetStoredPositions();
+        public abstract IEnumerable<Position> GetStoredPositions();
 
-        public abstract IList<PositionDelta> GetStoredDeltas();
+        public abstract TimeSortedSet<PositionDelta> GetStoredDeltas();
 
-        public abstract IList<FilledOrder> GetStoredOrders();
+        public abstract TimeSortedSet<FilledOrder> GetStoredOrders();
 
-        public abstract void InsertOrders(IList<FilledOrder> orders);
+        public abstract void InsertOrders(IEnumerable<FilledOrder> orders);
+
+        public abstract void DeleteOrders(IEnumerable<FilledOrder> orders);
 
         public abstract void InsertDelta(PositionDelta delta);
 
-        public abstract void InsertDeltas(IList<PositionDelta> deltas);
+        public abstract void InsertDeltas(IEnumerable<PositionDelta> deltas);
 
         public abstract void InsertPosition(Position position);
 
-        public abstract void UpdateAllPositions(IList<Position> positions);
+        public abstract void UpdateAllPositions(IEnumerable<Position> positions);
 
         public abstract void DeletePosition(Position position);
 
-        public abstract IList<FilledOrder> GetTodaysFilledOrders();
+        public abstract TimeSortedSet<FilledOrder> GetTodaysFilledOrders();
 
         protected abstract bool OrderAlreadyExists(FilledOrder order);
 
         protected abstract Position? GetPosition(string symbol);
 
-        public IList<PositionDelta> ComputeDeltasAndUpdateTables(IList<FilledOrder> liveOrders)
+        public FilledOrderMatchResult MatchOrdersAndUpdateTables(TimeSortedSet<FilledOrder> liveOrders, double lookbackMinutes)
         {
-            IList<FilledOrder> newOrders = liveOrders.Where(order => !OrderAlreadyExists(order)).ToList();
+            // After the matching process, any unmatched filled orders will be the new filled orders
+            TimeSortedSet<FilledOrder> unmatchedLiveOrders = new TimeSortedSet<FilledOrder>(liveOrders);
+            IList<UpdatedFilledOrder> updatedFilledOrders = new List<UpdatedFilledOrder>();
+
+            // Only retrieve orders from the last "lookbackMinutes" minutes (call it X) for matching. This assumes that:
+            // 1) Order times will not be updated AFTER X minutes
+            // 2) It takes longer than X minutes for every visible order in the live portfolio to be pushed out of view
+            TimeSortedSet<FilledOrder> unmatchedDbOrders = new TimeSortedSet<FilledOrder>(
+                GetTodaysFilledOrders().Where(order => order.Time > DateTime.Now.AddMinutes(-lookbackMinutes)));
+
+            // 1st pass: Match with exact time
+            foreach (FilledOrder dbOrder in unmatchedDbOrders)
+            {
+                FilledOrder? match = unmatchedLiveOrders.FirstOrDefault(o => dbOrder.StrictEquals(o));
+                if (match != null)
+                {
+                    unmatchedLiveOrders.Remove(match);
+                    unmatchedDbOrders.Remove(match);
+                }
+            }
+            // 2nd pass: Match using closest time
+            foreach (FilledOrder dbOrder in unmatchedDbOrders)
+            {
+                FilledOrder? match = unmatchedLiveOrders.Where(o => dbOrder.EqualsIgnoreTime(o) && o.Time >= dbOrder.Time).FirstOrDefault();
+                if (match != null)
+                {
+                    unmatchedLiveOrders.Remove(match);
+                    UpdatedFilledOrder updated = new UpdatedFilledOrder(dbOrder, match);
+                    updatedFilledOrders.Add(updated);
+                    Log.Information("Updated order {@OldOrder} to {@NewOrder}", dbOrder, match);
+                }
+                else
+                {
+                    PositionDatabaseException ex = new PositionDatabaseException("No live order matched to database order");
+                    Log.Error(ex, "No live order matched to database order {@Order}- Symbol {Symbol}. Current live orders {@LiveOrders}", dbOrder, dbOrder.Symbol, liveOrders);
+                    throw ex;
+                }
+            }
+
+            UpdateOrders(updatedFilledOrders);
+            return new FilledOrderMatchResult(updatedFilledOrders, unmatchedLiveOrders);
+        }
+
+        public TimeSortedSet<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedSet<FilledOrder> newOrders)
+        {
             InsertOrders(newOrders);
 
-            IList<PositionDelta> deltas = new List<PositionDelta>();
+            TimeSortedSet<PositionDelta> deltas = new TimeSortedSet<PositionDelta>();
             foreach (FilledOrder order in newOrders)
             {
                 Position? oldPos = GetPosition(order.Symbol);
@@ -48,7 +94,7 @@ namespace Core
                     if (order.Instruction == InstructionType.SELL_TO_CLOSE)
                     {
                         PositionDatabaseException ex = new PositionDatabaseException("No existing position corresponding to sell order");
-                        Log.Fatal("No existing position corresponding to sell order {@Order}- Symbol {Symbol}", order, order.Symbol);
+                        Log.Fatal(ex, "No existing position corresponding to sell order {@Order}- Symbol {Symbol}", order, order.Symbol);
                         throw ex;
                     }
                     PositionDelta delta = new PositionDelta(
@@ -109,7 +155,7 @@ namespace Core
         public IList<PositionDelta> ComputeDeltasAndUpdateTables(IList<Position> livePositions)
         {
             IList<PositionDelta> deltas = new List<PositionDelta>();
-            IList<Position> oldPositions = GetStoredPositions();
+            IEnumerable<Position> oldPositions = GetStoredPositions();
 
             foreach (Position livePos in livePositions)
             {
@@ -169,6 +215,14 @@ namespace Core
             UpdateAllPositions(livePositions);
 
             return deltas;
+        }
+
+        private void UpdateOrders(IEnumerable<UpdatedFilledOrder> updatedFilledOrders)
+        {
+            IEnumerable<FilledOrder> oldOrders = updatedFilledOrders.Select(updated => updated.OldOrder);
+            DeleteOrders(oldOrders);
+            IEnumerable<FilledOrder> newOrders = updatedFilledOrders.Select(updated => updated.NewOrder);
+            InsertOrders(newOrders);
         }
     }
 }

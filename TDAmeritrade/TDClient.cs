@@ -43,11 +43,11 @@ namespace TDAmeritrade
 
         public Position? GetPosition(string symbol)
         {
-            IList<Position> positions = GetPositions();
+            IEnumerable<Position> positions = GetPositions();
             return positions.Where(pos => pos.Symbol == symbol).FirstOrDefault();
         }
 
-        public IList<Position> GetPositions()
+        public IEnumerable<Position> GetPositions()
         {
             RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber);
             RestRequest request = CreateRequest(Method.GET);
