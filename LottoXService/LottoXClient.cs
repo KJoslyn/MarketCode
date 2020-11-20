@@ -88,16 +88,23 @@ namespace LottoXService
         }
 
         // TODO: Remove first part of tuple
-        protected override async Task<(string, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders()
+        protected override async Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders()
         {
             IList<string> currentPositionSymbols = PositionDB.GetStoredPositions().Select(pos => pos.Symbol).ToList();
             string filepath = GetNextOrdersFilepath();
             await TakeOrdersScreenshot(filepath);
-            return await ImageToOrdersConverter.GetNewFilledOrdersFromImage(filepath, currentPositionSymbols);
+            return await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath, currentPositionSymbols);
 
             //return await ImageToOrdersConverter.GetNewFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-2219.png", 
             //    todaysFilledOrders, 
             //    currentPositionSymbols);
+        }
+
+        // TODO: Remove first part of tuple
+        protected override async Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders(string ordersFilepath)
+        {
+            IList<string> currentPositionSymbols = PositionDB.GetStoredPositions().Select(pos => pos.Symbol).ToList();
+            return await ImageToOrdersConverter.GetFilledOrdersFromImage(ordersFilepath, currentPositionSymbols);
         }
 
         private async Task<bool> HasHeaderChanged()

@@ -98,7 +98,7 @@ namespace Core
 
             if (delta.Price > _config.MaxBuyPrice)
             {
-                Log.Warning("Buy price higher than buy max limit. Skipping order. Symbol {Symbol}, Price={Price}", delta.Symbol, delta.Price);
+                Log.Information("Buy price higher than buy max limit. Skipping order. Symbol {Symbol}, Price={Price}", delta.Symbol, delta.Price);
                 return null;
             }
 

@@ -22,9 +22,9 @@ namespace LottoXService
         public ImageToOrdersConverter(OCRConfig config) : base(config) { }
 
         // TODO: Remove first part of tuple
-        public async Task<(string, TimeSortedSet<FilledOrder>)> GetNewFilledOrdersFromImage(
-            string filePath, 
-            IList<string> currentPositionSymbols, 
+        public async Task<(bool, TimeSortedSet<FilledOrder>)> GetFilledOrdersFromImage(
+            string filePath,
+            IList<string> currentPositionSymbols,
             string writeToJsonPath = null)
         {
             IList<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
@@ -40,12 +40,13 @@ namespace LottoXService
                 throw ex;
             }
 
-            List<string> orderStrings = GetLottoxOrderStrings(lineTexts, currentPositionSymbols);
+            IEnumerable<string> orderStrings;
+            bool lowConfidenceIntFound = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, out orderStrings);
             //if (orderStrings.Count == 0) return new List<FilledOrder>();
-            if (orderStrings.Count == 0) return (GetFirstNormalizedDateTime(lineTexts), new TimeSortedSet<FilledOrder>());
+            if (orderStrings.Count() == 0) return (lowConfidenceIntFound, new TimeSortedSet<FilledOrder>());
 
             //return CreateFilledOrders(orderStrings));
-            return (GetFirstNormalizedDateTime(lineTexts), CreateFilledOrders(orderStrings));
+            return (lowConfidenceIntFound, CreateFilledOrders(orderStrings));
         }
 
         private string GetFirstNormalizedDateTime(List<string> lineTexts)
@@ -81,16 +82,44 @@ namespace LottoXService
         /// Due to the potential irregularity in where spaces occur, we simply concatenate all parts of a particular order here and leave it
         /// to another function to split out the parts of the order and determine whether the order's format is valid.
         /// </summary>
-        private List<string> GetLottoxOrderStrings(List<string> lineTexts, IList<string> currentPositionSymbols)
+        private bool GetLottoxOrderStrings(IEnumerable<Line> lines, IEnumerable<string> currentPositionSymbols, double intConfidenceThreshold, out IEnumerable<string> orderStrings)
         {
-            List<string> orderStrings = new List<string>();
+            bool lowConfidenceIntFound = false; 
+            orderStrings = new List<string>();
 
             string thisOrderStr = "";
             string thisOrderSymbol = "";
             bool isLTXOrApprovedWMM = false;
             bool skip = false;
-            foreach (string text in lineTexts)
+            bool wasLineOverriden = false;
+
+            foreach (Line line in lines)
             {
+                string? overrideLineText = null;
+
+                foreach(Word word in line.Words)
+                {
+                    bool isInt = int.TryParse(word.Text, out int parsedInt);
+                    if (isInt && word.Confidence < intConfidenceThreshold)
+                    {
+                        // 1's can be mistaken as 11's, since there is a faint column to the left of the 1.
+                        // Quantities should only be in increments of 5 anyway (unless it is a quantity of 1.)
+                        if (parsedInt == 11)
+                        {
+                            overrideLineText = line.Text.Replace("11", "1");
+                            Log.Information("Handled Low confidence integer found. OrderString {OrderString}, Integer {Integer}- overriden to 1.", thisOrderStr, parsedInt);
+                            wasLineOverriden = true;
+                        }
+                        else
+                        {
+                            Log.Warning("Unhandled Low confidence integer found. OrderString {OrderString}, Integer {Integer}", thisOrderStr, parsedInt);
+                            lowConfidenceIntFound = true;
+                            skip = true;
+                        }
+                    }
+                }
+                string text = overrideLineText ?? line.Text;
+
                 if (text == "Butterfly" || text == "Vertical")
                 {
                     skip = true;
@@ -105,6 +134,7 @@ namespace LottoXService
                     continue;
                 }
 
+                // Date string comes at the end of an order, so we finalize and reset here.
                 string? normalizedDateTimeStr = TryNormalizeDateTime(text);
                 if (normalizedDateTimeStr != null)
                 {
@@ -113,14 +143,22 @@ namespace LottoXService
                         thisOrderSymbol.Length > 0)
                     {
                         thisOrderStr += " " + normalizedDateTimeStr;
-                        orderStrings.Add(thisOrderStr);
+                        ((List<string>) orderStrings).Add(thisOrderStr);
+                        if (wasLineOverriden)
+                        {
+                            Log.Warning("LTX or Approved WMM order has overriden low-confidence text.");
+                        }
                     }
+                    // Reset flags
                     isLTXOrApprovedWMM = false;
                     thisOrderSymbol = "";
                     skip = false;
+                    wasLineOverriden = false;
                     continue;
                 }
 
+                // Orders may be mistakenly labeled as WMM orders. If there is a current position
+                // corresponding to a "WMM"- tagged order, we should assume it is mistagged/relevant.
                 if (text == "LTX" || 
                     (text == "WMM" && currentPositionSymbols.Contains(thisOrderSymbol)))
                 {
@@ -129,7 +167,7 @@ namespace LottoXService
 
                 thisOrderStr += " " + text;
             }
-            return orderStrings;
+            return lowConfidenceIntFound;
         }
 
         private string? TryNormalizeOptionSymbol(string orig)
@@ -159,9 +197,9 @@ namespace LottoXService
         /// LottoX order, where the option symbol and DateTime are correct.
         /// We allow filled and limit prices to mistakenly include a space or comma in place of a period, and correct that here.
         /// </summary>
-        private TimeSortedSet<FilledOrder> CreateFilledOrders(List<string> orderStrings)
+        private TimeSortedSet<FilledOrder> CreateFilledOrders(IEnumerable<string> orderStrings)
         {
-            Regex regex = new Regex(@"^([A-Z]{1,5}_\d{6}[CP]\d+(.\d)?) (\d+[., ]\d+) (Sell to Close|Buy to Open) (Market|\d+[., ]\d+) (\d+) (LTX|WMM) (\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (AM|PM))");
+            Regex regex = new Regex(@"^([A-Z]{1,5}_\d{6}[CP]\d+(.\d)?) (\d+[., ]\d+ )?([A-Za-z ]+?) (Market|\d+[., ]\d+) (.*? )?(LTX|WMM) (\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (AM|PM))");
 
             TimeSortedSet<FilledOrder> orders = new TimeSortedSet<FilledOrder>();
             foreach (string orderStr in orderStrings)
@@ -176,18 +214,30 @@ namespace LottoXService
 
                 string[] matches = match.Groups.Values.Select(group => group.Value).ToArray();
 
+                // If there was no filled price, the order has not been filled and we need to skip it.
+                if (matches[3] == "") continue;
+
                 string symbol = matches[1];
-                float price = float.Parse(ReplaceSpaceOrCommaWithPeriod(matches[3]));
-                string instruction = matches[4] == "Buy to Open"
-                    ? InstructionType.BUY_TO_OPEN
-                    : InstructionType.SELL_TO_CLOSE;
+                float price = float.Parse(ReplaceSpaceOrCommaWithPeriod(matches[3].Trim()));
+                string? instruction = GetInstruction(matches[4]);
+                if (instruction == null)
+                {
+                    Exception ex = new FilledOrderParsingException("Could not parse instruction from order!");
+                    Log.Warning(ex, "Could not parse instruction from order. Extracted text: " + orderStr);
+                    throw ex;
+                }
                 string orderType = matches[5] == "Market"
                     ? OrderType.MARKET
                     : OrderType.LIMIT;
                 float limit = orderType == OrderType.MARKET
                     ? 0
                     : float.Parse(ReplaceSpaceOrCommaWithPeriod(matches[5]));
-                int quantity = int.Parse(matches[6]);
+                bool hasQuantity = int.TryParse(matches[6].Trim(), out int quantity);
+                if (!hasQuantity)
+                {
+                    Log.Information("!!!!! Could not parse quantity from order. Assuming 1. Extracted text: " + orderStr);
+                    quantity = 1;
+                }
                 DateTime time = DateTime.Parse(matches[8]);
 
                 FilledOrder order = new FilledOrder(symbol, price, instruction, orderType, limit, quantity, time);
@@ -199,6 +249,35 @@ namespace LottoXService
                 }
             }
             return orders;
+        }
+
+        private string? GetInstruction(string fuzzyInstructionStr)
+        {
+            if (HammingDistance(fuzzyInstructionStr, "Buy to Open") <= 2)
+            {
+                return InstructionType.BUY_TO_OPEN;
+            }
+            else if (HammingDistance(fuzzyInstructionStr, "Sell to Close") <= 2)
+            {
+                return InstructionType.SELL_TO_CLOSE;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        private int HammingDistance(string first, string second)
+        {
+            if (first.Length > second.Length)
+            {
+                second.Concat(new string('!', first.Length - second.Length));
+            }
+            else if (second.Length > first.Length)
+            {
+                first.Concat(new string('!', second.Length - first.Length));
+            }
+            return first.Zip(second, (a, b) => a != b).Count(diff => diff);
         }
 
         private string ReplaceFirst(string text, string search, string replace)

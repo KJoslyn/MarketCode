@@ -95,9 +95,13 @@ namespace LottoXService
 
             int invalidCount = 0;
             int unexpectedErrorCount = 0;
+            int lowConfidenceCount = 0;
 
             // TODO: Remove lastTopOrderDateTime
             string lastTopOrderDateTime = "";
+
+            //string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-3941.png";
+            string seedOrdersFilename = "";
             while (!stoppingToken.IsCancellationRequested)
             {
                 TimeSpan now = DateTime.Now.TimeOfDay;
@@ -117,15 +121,34 @@ namespace LottoXService
                 }
 
                 TimeSortedSet<PositionDelta> deltas = new TimeSortedSet<PositionDelta>();
+                bool lastParseWasLowConfidence = false;
 
                 try
                 {
-                    //Log.Information("NOT CHECKING HEADERS");
-                    if (await LivePortfolioClient.HaveOrdersChanged(null))
+                    if (seedOrdersFilename.Length > 0 || lastParseWasLowConfidence)
+                    {
+                        Log.Information("*********Seeding live orders with file " + seedOrdersFilename);
+                        (lastParseWasLowConfidence, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
+                        seedOrdersFilename = "";
+                    }
+                    else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
                         Log.Information("***Change in top orders detected- getting live orders");
-                        string unused;
-                        (unused, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                        (lastParseWasLowConfidence, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    }
+
+                    if (lastParseWasLowConfidence)
+                    {
+                        lowConfidenceCount++;
+                        if (lowConfidenceCount > 2)
+                        {
+                            LowConfidenceParsingException ex = new LowConfidenceParsingException("Max number of low confidence parse attempts reached");
+                            throw ex;
+                        }
+                    }
+                    else
+                    {
+                        lowConfidenceCount = 0;
                     }
 
                     //deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
@@ -170,6 +193,11 @@ namespace LottoXService
                 catch (PositionDatabaseException ex)
                 {
                     //Assume the exception is already logged
+                    break;
+                }
+                catch (LowConfidenceParsingException ex)
+                {
+                    Log.Fatal(ex, "Max number of low confidence parsing attempts reached");
                     break;
                 }
                 catch (Exception ex)

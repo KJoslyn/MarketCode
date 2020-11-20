@@ -65,10 +65,9 @@ namespace Database
             try
             {
                 existingOrder = _db.GetCollection<FilledOrder>()
-                    .FindOne(o => o.Time.Equals(order.Time) && o.Symbol == order.Symbol);
+                    .FindOne(o => o.StrictEquals(order));
             } catch (Exception ex)
             {
-                Console.WriteLine(ex);
             }
             return existingOrder != null;
         }

@@ -1,4 +1,5 @@
 ﻿using Core.Model;
+using Serilog;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 #nullable enable
@@ -12,10 +13,27 @@ namespace Core
             PositionDB = positionDB;
 
             //Log.Information("INSERTING POSITIONS");
-            //Position pos1 = new Position("SFIX_201120C36", 40, (float)0.68);
+            //Position pos1 = new Position("CVNA_201127C230", 2, (float)7.13);
             //PositionDB.InsertPosition(pos1);
-            //Position pos2 = new Position("SPWR_201120C20", 70, (float)0.59);
+            //Position pos2 = new Position("MARA_201218C2.5", 30, (float)1.09);
             //PositionDB.InsertPosition(pos2);
+            //Position pos3 = new Position("MARA_201218C4", 50, (float)0.75);
+            //PositionDB.InsertPosition(pos3);
+            //Position pos4 = new Position("SFIX_201204C37", 30, (float)1.13);
+            //PositionDB.InsertPosition(pos4);
+            //Position pos5 = new Position("SPWR_201204C21", 20, (float)1.50);
+            //PositionDB.InsertPosition(pos5);
+            //Position pos6 = new Position("TSLA_201127C500", 2, (float)16.80);
+            //PositionDB.InsertPosition(pos6);
+
+            //Position pos1 = new Position("NET_201127C65", 10, (float)2.62);
+            //PositionDB.InsertPosition(pos1);
+            //Position pos2 = new Position("OSTK_201127C65", 20, (float)1.07);
+            //PositionDB.InsertPosition(pos2);
+            //Position pos3 = new Position("SPWR_201127C20", 50, (float)1.05);
+            //PositionDB.InsertPosition(pos3);
+            //Position pos4 = new Position("TSLA_201127C500", 1, (float)16.14);
+            //PositionDB.InsertPosition(pos4);
 
             //List<FilledOrder> orders = new List<FilledOrder>();
             //FilledOrder o1 = new FilledOrder("CGC_201120C25", (float)0.59, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, 0, 30, new System.DateTime(2020, 11, 17, 10, 11, 56));
@@ -45,17 +63,35 @@ namespace Core
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
 
         // TODO: Remove first part of tuple
-        protected abstract Task<(string, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders();
+        protected abstract Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders();
+
+        protected abstract Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders(string ordersFilename);
 
         // This does not update the database, but the method is not public.
         protected abstract Task<IList<Position>> RecognizeLivePositions();
 
         // TODO: Remove first part of tuple
-        public async Task<(string, TimeSortedSet<PositionDelta>)> GetLiveDeltasFromOrders()
+        public async Task<(bool, TimeSortedSet<PositionDelta>)> GetLiveDeltasFromOrders()
         {
-            (string topOrderDateTime, TimeSortedSet<FilledOrder> filledOrders) = await RecognizeLiveOrders();
-            FilledOrderMatchResult result = PositionDB.MatchOrdersAndUpdateTables(filledOrders, 10);
-            return (topOrderDateTime, PositionDB.ComputeDeltasAndUpdateTables(result.NewFilledOrders));
+            (bool isLowConfidence, TimeSortedSet<FilledOrder> filledOrders) = await RecognizeLiveOrders();
+            if (filledOrders.Count == 0)
+            {
+                return (isLowConfidence, new TimeSortedSet<PositionDelta>());
+            }
+            FilledOrderMatchResult result = PositionDB.MatchAndUpdateRecentOrdersIfTimeChanged(filledOrders, 10);
+            return (isLowConfidence, PositionDB.ComputeDeltasAndUpdateTables(result.NewFilledOrders));
+        }
+
+        // TODO: Remove first part of tuple
+        public async Task<(bool, TimeSortedSet<PositionDelta>)> GetLiveDeltasFromOrders(string ordersFilename)
+        {
+            (bool isLowConfidence, TimeSortedSet<FilledOrder> filledOrders) = await RecognizeLiveOrders(ordersFilename);
+            if (filledOrders.Count == 0)
+            {
+                return (isLowConfidence, new TimeSortedSet<PositionDelta>());
+            }
+            FilledOrderMatchResult result = PositionDB.MatchAndUpdateRecentOrdersIfTimeChanged(filledOrders, 10);
+            return (isLowConfidence, PositionDB.ComputeDeltasAndUpdateTables(result.NewFilledOrders));
         }
 
         // This does update the database so that the deltas remain accurate.

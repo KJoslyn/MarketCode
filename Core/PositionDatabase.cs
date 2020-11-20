@@ -36,35 +36,38 @@ namespace Core
 
         protected abstract Position? GetPosition(string symbol);
 
-        public FilledOrderMatchResult MatchOrdersAndUpdateTables(TimeSortedSet<FilledOrder> liveOrders, double lookbackMinutes)
+        public FilledOrderMatchResult MatchAndUpdateRecentOrdersIfTimeChanged(TimeSortedSet<FilledOrder> liveOrders, double lookbackMinutes)
         {
+            DateTime lookbackUntilTime = DateTime.Now.AddMinutes(-lookbackMinutes);
+
             // After the matching process, any unmatched filled orders will be the new filled orders
-            TimeSortedSet<FilledOrder> unmatchedLiveOrders = new TimeSortedSet<FilledOrder>(liveOrders);
+            TimeSortedSet<FilledOrder> unmatchedRecentLiveOrders = new TimeSortedSet<FilledOrder>(
+                liveOrders.Where(order => order.Time >= lookbackUntilTime));
             IList<UpdatedFilledOrder> updatedFilledOrders = new List<UpdatedFilledOrder>();
 
             // Only retrieve orders from the last "lookbackMinutes" minutes (call it X) for matching. This assumes that:
             // 1) Order times will not be updated AFTER X minutes
             // 2) It takes longer than X minutes for every visible order in the live portfolio to be pushed out of view
-            TimeSortedSet<FilledOrder> unmatchedDbOrders = new TimeSortedSet<FilledOrder>(
-                GetTodaysFilledOrders().Where(order => order.Time > DateTime.Now.AddMinutes(-lookbackMinutes)));
+            TimeSortedSet<FilledOrder> unmatchedRecentDbOrders = new TimeSortedSet<FilledOrder>(
+                GetTodaysFilledOrders().Where(order => order.Time >= lookbackUntilTime));
 
             // 1st pass: Match with exact time
-            foreach (FilledOrder dbOrder in unmatchedDbOrders)
+            foreach (FilledOrder dbOrder in unmatchedRecentDbOrders.ToList())
             {
-                FilledOrder? match = unmatchedLiveOrders.FirstOrDefault(o => dbOrder.StrictEquals(o));
+                FilledOrder? match = unmatchedRecentLiveOrders.FirstOrDefault(o => dbOrder.StrictEquals(o));
                 if (match != null)
                 {
-                    unmatchedLiveOrders.Remove(match);
-                    unmatchedDbOrders.Remove(match);
+                    unmatchedRecentLiveOrders.Remove(match);
+                    unmatchedRecentDbOrders.Remove(dbOrder);
                 }
             }
             // 2nd pass: Match using closest time
-            foreach (FilledOrder dbOrder in unmatchedDbOrders)
+            foreach (FilledOrder dbOrder in unmatchedRecentDbOrders)
             {
-                FilledOrder? match = unmatchedLiveOrders.Where(o => dbOrder.EqualsIgnoreTime(o) && o.Time >= dbOrder.Time).FirstOrDefault();
+                FilledOrder? match = unmatchedRecentLiveOrders.Where(o => dbOrder.EqualsIgnoreTime(o) && o.Time >= dbOrder.Time).FirstOrDefault();
                 if (match != null)
                 {
-                    unmatchedLiveOrders.Remove(match);
+                    unmatchedRecentLiveOrders.Remove(match);
                     UpdatedFilledOrder updated = new UpdatedFilledOrder(dbOrder, match);
                     updatedFilledOrders.Add(updated);
                     Log.Information("Updated order {@OldOrder} to {@NewOrder}", dbOrder, match);
@@ -78,7 +81,24 @@ namespace Core
             }
 
             UpdateOrders(updatedFilledOrders);
-            return new FilledOrderMatchResult(updatedFilledOrders, unmatchedLiveOrders);
+            TimeSortedSet<FilledOrder> newOrders = new TimeSortedSet<FilledOrder>(unmatchedRecentLiveOrders);
+
+            // Add any older olders that have not been seen before to the "newOrders" set.
+            TimeSortedSet<FilledOrder> oldLiveOrders = new TimeSortedSet<FilledOrder>(
+                liveOrders.Where(order => order.Time < lookbackUntilTime));
+            foreach(FilledOrder oldLiveOrder in oldLiveOrders)
+            {
+                if (!OrderAlreadyExists(oldLiveOrder))
+                {
+                    newOrders.Add(oldLiveOrder);
+                }
+            }
+            if (oldLiveOrders.Count > 0 && newOrders.Contains(oldLiveOrders.First()))
+            {
+                Log.Warning("Very old live order was found to be new. This may indicate that some orders were missed.");
+            }
+
+            return new FilledOrderMatchResult(updatedFilledOrders, newOrders);
         }
 
         public TimeSortedSet<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedSet<FilledOrder> newOrders)
