@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Core
 {
-    public class PositionDatabaseException : Exception
+    public class PortfolioDatabaseException : Exception
     {
-        public PositionDatabaseException(string message) : base(message) { }
+        public PortfolioDatabaseException(string message) : base(message) { }
     }
 }

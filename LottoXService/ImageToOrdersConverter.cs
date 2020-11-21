@@ -22,7 +22,7 @@ namespace LottoXService
         public ImageToOrdersConverter(OCRConfig config) : base(config) { }
 
         // TODO: Remove first part of tuple
-        public async Task<(bool, TimeSortedSet<FilledOrder>)> GetFilledOrdersFromImage(
+        public async Task<LiveOrdersResult> GetFilledOrdersFromImage(
             string filePath,
             IList<string> currentPositionSymbols,
             string writeToJsonPath = null)
@@ -41,12 +41,10 @@ namespace LottoXService
             }
 
             IEnumerable<string> orderStrings;
-            bool lowConfidenceIntFound = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, out orderStrings);
-            //if (orderStrings.Count == 0) return new List<FilledOrder>();
-            if (orderStrings.Count() == 0) return (lowConfidenceIntFound, new TimeSortedSet<FilledOrder>());
+            // TODO: Don't hardcode .93
+            bool skippedOrderDueToLowConfidence = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, out orderStrings);
 
-            //return CreateFilledOrders(orderStrings));
-            return (lowConfidenceIntFound, CreateFilledOrders(orderStrings));
+            return new LiveOrdersResult(CreateFilledOrders(orderStrings), skippedOrderDueToLowConfidence);
         }
 
         private string GetFirstNormalizedDateTime(List<string> lineTexts)
@@ -84,13 +82,14 @@ namespace LottoXService
         /// </summary>
         private bool GetLottoxOrderStrings(IEnumerable<Line> lines, IEnumerable<string> currentPositionSymbols, double intConfidenceThreshold, out IEnumerable<string> orderStrings)
         {
-            bool lowConfidenceIntFound = false; 
+            bool skippedOrderDueToLowConfidence = false; 
             orderStrings = new List<string>();
 
-            string thisOrderStr = "";
-            string thisOrderSymbol = "";
+            string orderStr = "";
+            string symbol = "";
+            bool lowConfidenceSkip = false;
             bool isLTXOrApprovedWMM = false;
-            bool skip = false;
+            bool isComplexOrder = false;
             bool wasLineOverriden = false;
 
             foreach (Line line in lines)
@@ -107,14 +106,13 @@ namespace LottoXService
                         if (parsedInt == 11)
                         {
                             overrideLineText = line.Text.Replace("11", "1");
-                            Log.Information("Handled Low confidence integer found. OrderString {OrderString}, Integer {Integer}- overriden to 1.", thisOrderStr, parsedInt);
+                            Log.Information("Handled Low confidence integer found. OrderString {OrderString}, Integer {Integer}- overriden to 1.", orderStr, parsedInt);
                             wasLineOverriden = true;
                         }
                         else
                         {
-                            Log.Warning("Unhandled Low confidence integer found. OrderString {OrderString}, Integer {Integer}", thisOrderStr, parsedInt);
-                            lowConfidenceIntFound = true;
-                            skip = true;
+                            Log.Warning("Unhandled Low confidence integer found- skipping order. OrderString {OrderString}, Integer {Integer}", orderStr, parsedInt);
+                            lowConfidenceSkip = true;
                         }
                     }
                 }
@@ -122,15 +120,15 @@ namespace LottoXService
 
                 if (text == "Butterfly" || text == "Vertical")
                 {
-                    skip = true;
+                    isComplexOrder = true;
                     continue;
                 }
 
                 string? normalizedOptionSymbol = TryNormalizeOptionSymbol(text);
                 if (normalizedOptionSymbol != null)
                 {
-                    thisOrderStr = normalizedOptionSymbol;
-                    thisOrderSymbol = normalizedOptionSymbol;
+                    orderStr = normalizedOptionSymbol;
+                    symbol = normalizedOptionSymbol;
                     continue;
                 }
 
@@ -139,20 +137,28 @@ namespace LottoXService
                 if (normalizedDateTimeStr != null)
                 {
                     if (isLTXOrApprovedWMM &&
-                        !skip &&
-                        thisOrderSymbol.Length > 0)
+                        symbol.Length > 0 &&
+                        !isComplexOrder)
                     {
-                        thisOrderStr += " " + normalizedDateTimeStr;
-                        ((List<string>) orderStrings).Add(thisOrderStr);
-                        if (wasLineOverriden)
+                        if (lowConfidenceSkip)
                         {
-                            Log.Warning("LTX or Approved WMM order has overriden low-confidence text.");
+                            skippedOrderDueToLowConfidence = true;
+                        }
+                        else
+                        {
+                            orderStr += " " + normalizedDateTimeStr;
+                            ((List<string>) orderStrings).Add(orderStr);
+                            if (wasLineOverriden)
+                            {
+                                Log.Warning("LTX or Approved WMM order has overriden low-confidence text.");
+                            }
                         }
                     }
                     // Reset flags
+                    symbol = "";
+                    lowConfidenceSkip = false;
                     isLTXOrApprovedWMM = false;
-                    thisOrderSymbol = "";
-                    skip = false;
+                    isComplexOrder = false;
                     wasLineOverriden = false;
                     continue;
                 }
@@ -160,14 +166,14 @@ namespace LottoXService
                 // Orders may be mistakenly labeled as WMM orders. If there is a current position
                 // corresponding to a "WMM"- tagged order, we should assume it is mistagged/relevant.
                 if (text == "LTX" || 
-                    (text == "WMM" && currentPositionSymbols.Contains(thisOrderSymbol)))
+                    (text == "WMM" && currentPositionSymbols.Contains(symbol)))
                 {
                     isLTXOrApprovedWMM = true;
                 }
 
-                thisOrderStr += " " + text;
+                orderStr += " " + text;
             }
-            return lowConfidenceIntFound;
+            return skippedOrderDueToLowConfidence;
         }
 
         private string? TryNormalizeOptionSymbol(string orig)
@@ -199,6 +205,8 @@ namespace LottoXService
         /// </summary>
         private TimeSortedSet<FilledOrder> CreateFilledOrders(IEnumerable<string> orderStrings)
         {
+            if (orderStrings.Count() == 0) return new TimeSortedSet<FilledOrder>();
+
             Regex regex = new Regex(@"^([A-Z]{1,5}_\d{6}[CP]\d+(.\d)?) (\d+[., ]\d+ )?([A-Za-z ]+?) (Market|\d+[., ]\d+) (.*? )?(LTX|WMM) (\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (AM|PM))");
 
             TimeSortedSet<FilledOrder> orders = new TimeSortedSet<FilledOrder>();

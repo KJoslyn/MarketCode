@@ -8,9 +8,9 @@ namespace Core
 {
     public abstract class LivePortfolioClient
     {
-        public LivePortfolioClient(PositionDatabase positionDB)
+        public LivePortfolioClient(PortfolioDatabase database)
         {
-            PositionDB = positionDB;
+            Database = database;
 
             //Log.Information("INSERTING POSITIONS");
             //Position pos1 = new Position("CVNA_201127C230", 2, (float)7.13);
@@ -52,7 +52,7 @@ namespace Core
             //PositionDB.InsertOrders(orders);
         }
 
-        protected PositionDatabase PositionDB { get; init; }
+        protected PortfolioDatabase Database { get; init; }
 
         public abstract Task<bool> Login();
 
@@ -62,36 +62,37 @@ namespace Core
 
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
 
-        // TODO: Remove first part of tuple
-        protected abstract Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders();
+        protected abstract Task<LiveOrdersResult> RecognizeLiveOrders();
 
-        protected abstract Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders(string ordersFilename);
+        protected abstract Task<LiveOrdersResult> RecognizeLiveOrders(string ordersFilename);
 
         // This does not update the database, but the method is not public.
         protected abstract Task<IList<Position>> RecognizeLivePositions();
 
-        // TODO: Remove first part of tuple
-        public async Task<(bool, TimeSortedSet<PositionDelta>)> GetLiveDeltasFromOrders()
+        public async Task<LiveDeltasResult> GetLiveDeltasFromOrders()
         {
-            (bool isLowConfidence, TimeSortedSet<FilledOrder> filledOrders) = await RecognizeLiveOrders();
-            if (filledOrders.Count == 0)
+            LiveOrdersResult liveOrdersResult = await RecognizeLiveOrders();
+            TimeSortedSet<PositionDelta> liveDeltas = new TimeSortedSet<PositionDelta>();
+            if (liveOrdersResult.LiveOrders.Count > 0)
             {
-                return (isLowConfidence, new TimeSortedSet<PositionDelta>());
+                NewAndUpdatedFilledOrders result = Database.IdentifyNewAndUpdatedOrders(liveOrdersResult.LiveOrders, 10);
+                Database.UpdateOrders(result.UpdatedFilledOrders);
+                liveDeltas = Database.ComputeDeltasAndUpdateTables(result.NewFilledOrders);
             }
-            FilledOrderMatchResult result = PositionDB.MatchAndUpdateRecentOrdersIfTimeChanged(filledOrders, 10);
-            return (isLowConfidence, PositionDB.ComputeDeltasAndUpdateTables(result.NewFilledOrders));
+            return new LiveDeltasResult(liveDeltas, liveOrdersResult.SkippedOrderDueToLowConfidence);
         }
 
-        // TODO: Remove first part of tuple
-        public async Task<(bool, TimeSortedSet<PositionDelta>)> GetLiveDeltasFromOrders(string ordersFilename)
+        public async Task<LiveDeltasResult> GetLiveDeltasFromOrders(string ordersFilename)
         {
-            (bool isLowConfidence, TimeSortedSet<FilledOrder> filledOrders) = await RecognizeLiveOrders(ordersFilename);
-            if (filledOrders.Count == 0)
+            LiveOrdersResult liveOrdersResult = await RecognizeLiveOrders(ordersFilename);
+            TimeSortedSet<PositionDelta> liveDeltas = new TimeSortedSet<PositionDelta>();
+            if (liveOrdersResult.LiveOrders.Count > 0)
             {
-                return (isLowConfidence, new TimeSortedSet<PositionDelta>());
+                NewAndUpdatedFilledOrders result = Database.IdentifyNewAndUpdatedOrders(liveOrdersResult.LiveOrders, 10);
+                Database.UpdateOrders(result.UpdatedFilledOrders);
+                liveDeltas = Database.ComputeDeltasAndUpdateTables(result.NewFilledOrders);
             }
-            FilledOrderMatchResult result = PositionDB.MatchAndUpdateRecentOrdersIfTimeChanged(filledOrders, 10);
-            return (isLowConfidence, PositionDB.ComputeDeltasAndUpdateTables(result.NewFilledOrders));
+            return new LiveDeltasResult(liveDeltas, liveOrdersResult.SkippedOrderDueToLowConfidence);
         }
 
         // This does update the database so that the deltas remain accurate.
@@ -100,7 +101,7 @@ namespace Core
         public async Task<IList<PositionDelta>> GetLiveDeltasFromPositions()
         {
             IList<Position> livePositions = await RecognizeLivePositions();
-            return PositionDB.ComputeDeltasAndUpdateTables(livePositions);
+            return Database.ComputeDeltasAndUpdateTables(livePositions);
         }
 
         //// This does update the database so that the deltas remain accurate.

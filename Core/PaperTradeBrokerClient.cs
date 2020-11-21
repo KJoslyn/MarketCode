@@ -14,13 +14,13 @@ namespace Core
 {
     public class PaperTradeBrokerClient : IBrokerClient
     {
-        public PaperTradeBrokerClient(PositionDatabase positionDB, IMarketDataClient marketDataClient)
+        public PaperTradeBrokerClient(PortfolioDatabase positionDB, IMarketDataClient marketDataClient)
         {
             PositionDB = positionDB;
             MarketDataClient = marketDataClient;
         }
 
-        private PositionDatabase PositionDB { get; init; }
+        private PortfolioDatabase PositionDB { get; init; }
         private IMarketDataClient MarketDataClient { get; init; }
 
         public Position? GetPosition(string symbol)

@@ -15,7 +15,7 @@ namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PositionDatabase positionDB) : base(rbConfig, positionDB)
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PortfolioDatabase positionDB) : base(rbConfig, positionDB)
         {
             ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
             ImageToOrdersConverter = new ImageToOrdersConverter(ocrConfig);
@@ -88,9 +88,9 @@ namespace LottoXService
         }
 
         // TODO: Remove first part of tuple
-        protected override async Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders()
+        protected override async Task<LiveOrdersResult> RecognizeLiveOrders()
         {
-            IList<string> currentPositionSymbols = PositionDB.GetStoredPositions().Select(pos => pos.Symbol).ToList();
+            IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
             string filepath = GetNextOrdersFilepath();
             await TakeOrdersScreenshot(filepath);
             return await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath, currentPositionSymbols);
@@ -101,9 +101,9 @@ namespace LottoXService
         }
 
         // TODO: Remove first part of tuple
-        protected override async Task<(bool, TimeSortedSet<FilledOrder>)> RecognizeLiveOrders(string ordersFilepath)
+        protected override async Task<LiveOrdersResult> RecognizeLiveOrders(string ordersFilepath)
         {
-            IList<string> currentPositionSymbols = PositionDB.GetStoredPositions().Select(pos => pos.Symbol).ToList();
+            IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
             return await ImageToOrdersConverter.GetFilledOrdersFromImage(ordersFilepath, currentPositionSymbols);
         }
 

@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Database
 {
-    public class LitePositionDatabase : PositionDatabase
+    public class LitePositionDatabase : PortfolioDatabase
     {
         protected LiteDatabase _db;
 
@@ -41,7 +41,7 @@ namespace Database
             Position? currentPos = GetPosition(position.Symbol);
             if (currentPos != null)
             {
-                Exception ex = new PositionDatabaseException("Cannot insert position since one already exists");
+                Exception ex = new PortfolioDatabaseException("Cannot insert position since one already exists");
                 Log.Fatal(ex, "Tried to insert {@Position} but one already exists in the database: {@CurrentPosition}- Symbol {Symbol}", position, currentPos, position.Symbol);
                 throw ex;
             }

@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace Core
 {
-    public abstract class PositionDatabase
+    public abstract class PortfolioDatabase
     {
         public abstract IEnumerable<Position> GetStoredPositions();
 
@@ -36,7 +36,7 @@ namespace Core
 
         protected abstract Position? GetPosition(string symbol);
 
-        public FilledOrderMatchResult MatchAndUpdateRecentOrdersIfTimeChanged(TimeSortedSet<FilledOrder> liveOrders, double lookbackMinutes)
+        public NewAndUpdatedFilledOrders IdentifyNewAndUpdatedOrders(TimeSortedSet<FilledOrder> liveOrders, double lookbackMinutes)
         {
             DateTime lookbackUntilTime = DateTime.Now.AddMinutes(-lookbackMinutes);
 
@@ -74,31 +74,27 @@ namespace Core
                 }
                 else
                 {
-                    PositionDatabaseException ex = new PositionDatabaseException("No live order matched to database order");
+                    PortfolioDatabaseException ex = new PortfolioDatabaseException("No live order matched to database order");
                     Log.Error(ex, "No live order matched to database order {@Order}- Symbol {Symbol}. Current live orders {@LiveOrders}", dbOrder, dbOrder.Symbol, liveOrders);
                     throw ex;
                 }
             }
 
-            UpdateOrders(updatedFilledOrders);
             TimeSortedSet<FilledOrder> newOrders = new TimeSortedSet<FilledOrder>(unmatchedRecentLiveOrders);
 
             // Add any older olders that have not been seen before to the "newOrders" set.
             TimeSortedSet<FilledOrder> oldLiveOrders = new TimeSortedSet<FilledOrder>(
                 liveOrders.Where(order => order.Time < lookbackUntilTime));
-            foreach(FilledOrder oldLiveOrder in oldLiveOrders)
+            foreach(FilledOrder oldLiveOrder in oldLiveOrders.Where(o => !OrderAlreadyExists(o)))
             {
-                if (!OrderAlreadyExists(oldLiveOrder))
-                {
-                    newOrders.Add(oldLiveOrder);
-                }
+                newOrders.Add(oldLiveOrder);
             }
             if (oldLiveOrders.Count > 0 && newOrders.Contains(oldLiveOrders.First()))
             {
-                Log.Warning("Very old live order was found to be new. This may indicate that some orders were missed.");
+                Log.Warning("Oldest visible live order was found to be new. This may indicate that some orders were missed.");
             }
 
-            return new FilledOrderMatchResult(updatedFilledOrders, newOrders);
+            return new NewAndUpdatedFilledOrders(newOrders, updatedFilledOrders);
         }
 
         public TimeSortedSet<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedSet<FilledOrder> newOrders)
@@ -113,7 +109,7 @@ namespace Core
                 {
                     if (order.Instruction == InstructionType.SELL_TO_CLOSE)
                     {
-                        PositionDatabaseException ex = new PositionDatabaseException("No existing position corresponding to sell order");
+                        PortfolioDatabaseException ex = new PortfolioDatabaseException("No existing position corresponding to sell order");
                         Log.Fatal(ex, "No existing position corresponding to sell order {@Order}- Symbol {Symbol}", order, order.Symbol);
                         throw ex;
                     }
@@ -237,7 +233,7 @@ namespace Core
             return deltas;
         }
 
-        private void UpdateOrders(IEnumerable<UpdatedFilledOrder> updatedFilledOrders)
+        public void UpdateOrders(IEnumerable<UpdatedFilledOrder> updatedFilledOrders)
         {
             IEnumerable<FilledOrder> oldOrders = updatedFilledOrders.Select(updated => updated.OldOrder);
             DeleteOrders(oldOrders);

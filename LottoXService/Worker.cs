@@ -42,14 +42,14 @@ namespace LottoXService
             _generalConfig = generalOptions.Value;
             _orderConfig = orderOptions.Value;
 
-            PositionDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
+            PortfolioDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
 
             if (_generalConfig.UsePaperTrade)
             {
-                PositionDatabase paperDatabase = new LitePositionDatabase(_generalConfig.PaperTradeDatabasePath);
+                PortfolioDatabase paperDatabase = new LitePositionDatabase(_generalConfig.PaperTradeDatabasePath);
                 BrokerClient = new PaperTradeBrokerClient(paperDatabase, MarketDataClient);
             }
             else
@@ -102,6 +102,9 @@ namespace LottoXService
 
             //string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-3941.png";
             string seedOrdersFilename = "";
+
+            bool lastParseSkippedDeltaDueToLowConfidence = false;
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 TimeSpan now = DateTime.Now.TimeOfDay;
@@ -120,24 +123,34 @@ namespace LottoXService
                     //continue;
                 }
 
-                TimeSortedSet<PositionDelta> deltas = new TimeSortedSet<PositionDelta>();
-                bool lastParseWasLowConfidence = false;
-
                 try
                 {
-                    if (seedOrdersFilename.Length > 0 || lastParseWasLowConfidence)
+                    LiveDeltasResult result;
+
+                    if (seedOrdersFilename.Length > 0)
                     {
                         Log.Information("*********Seeding live orders with file " + seedOrdersFilename);
-                        (lastParseWasLowConfidence, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
+                        result = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
                         seedOrdersFilename = "";
+                    }
+                    else if (lastParseSkippedDeltaDueToLowConfidence)
+                    {
+                        Log.Information("***Last parse skipped delta due to low confidence. Trying again.");
+                        result = await LivePortfolioClient.GetLiveDeltasFromOrders();
                     }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
                         Log.Information("***Change in top orders detected- getting live orders");
-                        (lastParseWasLowConfidence, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                        result = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                    }
+                    else
+                    {
+                        result = new LiveDeltasResult(new TimeSortedSet<PositionDelta>(), false);
                     }
 
-                    if (lastParseWasLowConfidence)
+                    lastParseSkippedDeltaDueToLowConfidence = result.SkippedDeltaDueToLowConfidence;
+
+                    if (lastParseSkippedDeltaDueToLowConfidence)
                     {
                         lowConfidenceCount++;
                         if (lowConfidenceCount > 2)
@@ -164,7 +177,7 @@ namespace LottoXService
 
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 
-                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(deltas);
+                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(result.LiveDeltas);
 
                     foreach (Order order in orders)
                     {
@@ -190,7 +203,7 @@ namespace LottoXService
 
                     continue;
                 }
-                catch (PositionDatabaseException ex)
+                catch (PortfolioDatabaseException ex)
                 {
                     //Assume the exception is already logged
                     break;
