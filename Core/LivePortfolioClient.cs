@@ -102,7 +102,7 @@ namespace Core
                 OptionQuote quote;
                 try
                 {
-                    quote = MarketDataClient.GetQuote(order.Symbol);
+                    quote = MarketDataClient.GetOptionQuote(order.Symbol);
                 }
                 catch (Exception ex)
                 {

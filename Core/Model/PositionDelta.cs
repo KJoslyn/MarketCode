@@ -3,7 +3,7 @@ using System;
 
 namespace Core.Model
 {
-    public class PositionDelta : HasTime
+    public class PositionDelta : HasSymbolInStandardFormat, HasTime
     {
         public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, DateTime? time = null)
         {
@@ -23,7 +23,6 @@ namespace Core.Model
         }
 
         public string DeltaType { get; }
-        public string Symbol { get; }
         public float Quantity { get; }
         public float Price { get; }
 

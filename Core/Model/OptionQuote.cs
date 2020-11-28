@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Core.Model
 {
-    public class OptionQuote
+    public class OptionQuote : HasSymbolInStandardFormat
     {
         public OptionQuote(string symbol, float bid, float ask, float last, float mark, float mult, float hi, float low, long longTime)
         {
@@ -23,7 +23,6 @@ namespace Core.Model
 
         private DateTime? _time;
 
-        public string Symbol { get; init; }
         public float BidPrice { get; init; }
         public float AskPrice { get; init; }
         public float LastPrice { get; init; }

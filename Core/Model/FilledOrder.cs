@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Core.Model
 {
-    public class FilledOrder : HasTime
+    public class FilledOrder : HasSymbolInStandardFormat, HasTime
     {
         public FilledOrder(string symbol, float price, string instruction, string orderType, float limit, int quantity, DateTime time)
         {
@@ -30,7 +30,6 @@ namespace Core.Model
         public FilledOrder() { }
 
         public string Id { get => Symbol + Time.ToString() + Instruction + OrderType + Quantity.ToString() + Quantity.ToString() + Price.ToString("0.00"); }
-        public string Symbol { get; init; }
         public float Price { get; init; }
         public string Instruction { get; init; }
         public string OrderType { get; init; }

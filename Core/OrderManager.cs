@@ -41,7 +41,7 @@ namespace Core
                 quote.Time < DateTime.Now.AddSeconds(-15))
             {
                 Log.Information("Getting new quote. Old quote- {@Quote}", quote);
-                quote = MarketDataClient.GetQuote(delta.Symbol);
+                quote = MarketDataClient.GetOptionQuote(delta.Symbol);
             }
             Log.Information("{DeltaType} delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta.DeltaType, delta, quote.Mark.ToString("0.00"), delta.Symbol);
 

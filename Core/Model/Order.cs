@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Core.Model
 {
-    public class Order
+    public class Order : HasSymbolInStandardFormat
     {
         public Order(string symbol, int quantity, string instruction, string orderType, float limit)
         {
@@ -27,7 +27,6 @@ namespace Core.Model
             Limit = limit;
         }
 
-        public string Symbol { get; }
         public int Quantity { get; }
         public string Instruction { get; }
         public string OrderType { get; }

@@ -43,6 +43,11 @@ namespace TDAmeritrade
 
         public Position? GetPosition(string symbol)
         {
+            if (OptionSymbolUtils.IsOptionSymbol(symbol))
+            {
+                OptionSymbolUtils.ValidateDateIsFormatAndNotExpired(symbol, OptionSymbolUtils.StandardDateFormat);
+            }
+
             IEnumerable<Position> positions = GetPositions();
             return positions.Where(pos => pos.Symbol == symbol).FirstOrDefault();
         }
@@ -57,9 +62,15 @@ namespace TDAmeritrade
             return account.SecuritiesAccount.Positions.Cast<Position>().ToList();
         }
 
-        public OptionQuote GetQuote(string symbol)
+        public OptionQuote GetOptionQuote(string symbol)
         {
-            RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/" + symbol + "/quotes");
+            if (!OptionSymbolUtils.IsOptionSymbol(symbol))
+            {
+                throw new ArgumentException("Provided symbol is not an option symbol: " + symbol);
+            }
+            string tdAmSymbol = OptionSymbolUtils.ConvertDateFormat(symbol, OptionSymbolUtils.StandardDateFormat, Constants.TDOptionDateFormat);
+
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/" + tdAmSymbol + "/quotes");
             RestRequest request = CreateRequest(Method.GET);
             IRestResponse response = ExecuteRequest(client, request);
             if (!response.IsSuccessful || response.Content.Contains("Symbol not found"))
@@ -68,7 +79,7 @@ namespace TDAmeritrade
             }
             Regex responseRegex = new Regex("{\"assetType.*?}");
             Match match = responseRegex.Match(response.Content);
-            OptionQuote quote = JsonConvert.DeserializeObject<OptionQuote>(match.Value);
+            OptionQuote quote = JsonConvert.DeserializeObject<TDOptionQuote>(match.Value);
             return quote;
         }
 
@@ -101,7 +112,7 @@ namespace TDAmeritrade
 
         private string CreateOrderBody(Order order)
         {
-            Instrument instrument = new Instrument(order.Symbol, AssetType.OPTION);
+            Instrument instrument = new Instrument(order.Symbol, AssetType.OPTION, OptionSymbolUtils.StandardDateFormat);
             OrderLeg orderLeg = new OrderLeg(order.Instruction, (int)order.Quantity, instrument);
             List<OrderLeg> orderLegCollection = new List<OrderLeg>();
             orderLegCollection.Add(orderLeg);
@@ -129,7 +140,7 @@ namespace TDAmeritrade
                     NamingStrategy = new CamelCaseNamingStrategy()
                 }
             });
-            Log.Information("TDAm Order: {@Order}, string: {OrderStr}, Symbol {Symbol}", orderBody, orderBodyStr, order.Symbol);
+            Log.Information("TDAm Order: {@Order}, string: {OrderStr}, Symbol {Symbol}", orderBody, orderBodyStr, instrument.Symbol);
             return orderBodyStr;
         }
 

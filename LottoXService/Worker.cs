@@ -1,5 +1,6 @@
 using AzureOCR;
 using Core;
+using Core.Exceptions;
 using Core.Model;
 using Core.Model.Constants;
 using Database;
@@ -85,9 +86,11 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            IEnumerable<Position> positions = BrokerClient.GetPositions();
+            OptionQuote quote;
             try
             {
-                OptionQuote quote = MarketDataClient.GetQuote("AAPL_121820C140");
+                quote = MarketDataClient.GetOptionQuote("AAPL_201218C140");
                 //OptionQuote quote = MarketDataClient.GetQuote("AAPL_121819C140");
             }
             catch (Exception ex)
@@ -234,6 +237,16 @@ namespace LottoXService
                 catch (LowConfidenceParsingException ex)
                 {
                     Log.Fatal(ex, "Max number of low confidence parsing attempts reached");
+                    break;
+                }
+                catch (OptionParsingException ex)
+                {
+                    Log.Fatal(ex, "Error parsing option symbol. Symbol {Symbol}", ex.Symbol);
+                    break;
+                }
+                catch (ArgumentException ex)
+                {
+                    Log.Fatal(ex, "Arument exception encountered");
                     break;
                 }
                 catch (Exception ex)

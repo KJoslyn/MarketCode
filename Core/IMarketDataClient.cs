@@ -9,7 +9,7 @@ namespace Core
 {
     public interface IMarketDataClient
     {
-        public OptionQuote GetQuote(string symbol);
+        public OptionQuote GetOptionQuote(string symbol);
 
         public bool IsMarketOpenToday();
     }

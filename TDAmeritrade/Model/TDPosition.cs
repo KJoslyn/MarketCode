@@ -1,4 +1,5 @@
-﻿using Core.Model;
+﻿using Core;
+using Core.Model;
 
 namespace TDAmeritrade.Model
 {
@@ -9,6 +10,15 @@ namespace TDAmeritrade.Model
         public float ShortQuantity { get; init; }
         public Instrument Instrument { get; init; }
         public float MarketValue { get; init; }
-        public override string Symbol { get => Instrument.Symbol; }
+        public override string Symbol
+        {
+            get
+            {
+                string instrumentSymbol = Instrument.Symbol;
+                return OptionSymbolUtils.IsOptionSymbol(instrumentSymbol)
+                    ? OptionSymbolUtils.ConvertToStandardDateFormat(Instrument.Symbol, Constants.TDOptionDateFormat)
+                    : instrumentSymbol;
+            }
+        }
     }
 }
