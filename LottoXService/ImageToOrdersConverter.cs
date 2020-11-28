@@ -22,7 +22,7 @@ namespace LottoXService
         public ImageToOrdersConverter(OCRConfig config) : base(config) { }
 
         // TODO: Remove first part of tuple
-        public async Task<LiveOrdersResult> GetFilledOrdersFromImage(
+        public async Task<UnvalidatedLiveOrdersResult> GetFilledOrdersFromImage(
             string filePath,
             IList<string> currentPositionSymbols,
             string writeToJsonPath = null)
@@ -41,10 +41,10 @@ namespace LottoXService
             }
 
             IEnumerable<string> orderStrings;
-            // TODO: Don't hardcode .93
-            bool skippedOrderDueToLowConfidence = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, out orderStrings);
+            // TODO: Don't hardcode .93 or .92
+            bool skippedOrderDueToLowConfidence = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, 0.92, out orderStrings);
 
-            return new LiveOrdersResult(CreateFilledOrders(orderStrings), skippedOrderDueToLowConfidence);
+            return new UnvalidatedLiveOrdersResult(CreateFilledOrders(orderStrings), skippedOrderDueToLowConfidence);
         }
 
         private string GetFirstNormalizedDateTime(List<string> lineTexts)
@@ -74,13 +74,56 @@ namespace LottoXService
             return regex.IsMatch(joined);
         }
 
+        private string? OverrideLowConfidenceLine(Line line, string currentOrderStr, double intConfidenceThreshold, double symbolConfidenceThreshold, out bool lowConfidenceSkip)
+        {
+            string? overrideLineText = null;
+            lowConfidenceSkip = false;
+
+            string? optionSymbol = TryNormalizeOptionSymbol(line.Text);
+            bool isOptionSymbol = optionSymbol != null;
+
+            foreach(Word word in line.Words)
+            {
+                bool isInt = int.TryParse(word.Text, out int parsedInt);
+                if (isInt && word.Confidence < intConfidenceThreshold)
+                {
+                    // 1's can be mistaken as 11's, since there is a faint column to the left of the 1.
+                    // Quantities should only be in increments of 5 anyway (unless it is a quantity of 1.)
+                    if (parsedInt == 11)
+                    {
+                        Log.Information("Handled Low confidence integer found. OrderString {OrderString}, Integer {Integer}- overriden to 1.", currentOrderStr, parsedInt);
+                        overrideLineText = line.Text.Replace("11", "1");
+                    }
+                    else
+                    {
+                        Log.Warning("Unhandled Low confidence integer found- skipping order. OrderString {OrderString}, Integer {Integer}", currentOrderStr, parsedInt);
+                        lowConfidenceSkip = true;
+                    }
+                }
+            }
+            if (isOptionSymbol)
+            {
+                double totalConfidence = line.Words.Select(word => word.Confidence).Aggregate((x, y) => x * y);
+                if (totalConfidence < symbolConfidenceThreshold)
+                {
+                    Log.Information("Low confidence symbol {Symbol}, Confidence: {Confidence}. OrderString {OrderString}", optionSymbol, totalConfidence.ToString("0.000"), currentOrderStr);
+                }
+            }
+            return overrideLineText;
+        }
+
         /// <summary>
         /// Returns a list of string representations of LottoX orders. Common mistakes in image recognition for option symbols and DateTimes
         /// are corrected. Mistakes in prices are NOT corrected. This is commonly a period that has been interpreted as a space or comma.
         /// Due to the potential irregularity in where spaces occur, we simply concatenate all parts of a particular order here and leave it
         /// to another function to split out the parts of the order and determine whether the order's format is valid.
         /// </summary>
-        private bool GetLottoxOrderStrings(IEnumerable<Line> lines, IEnumerable<string> currentPositionSymbols, double intConfidenceThreshold, out IEnumerable<string> orderStrings)
+        private bool GetLottoxOrderStrings(
+            IEnumerable<Line> lines, 
+            IEnumerable<string> currentPositionSymbols, 
+            double intConfidenceThreshold, 
+            double symbolConfidenceThreshold, 
+            out IEnumerable<string> orderStrings)
         {
             bool skippedOrderDueToLowConfidence = false; 
             orderStrings = new List<string>();
@@ -94,35 +137,10 @@ namespace LottoXService
 
             foreach (Line line in lines)
             {
-                string? overrideLineText = null;
-
-                foreach(Word word in line.Words)
-                {
-                    bool isInt = int.TryParse(word.Text, out int parsedInt);
-                    if (isInt && word.Confidence < intConfidenceThreshold)
-                    {
-                        // 1's can be mistaken as 11's, since there is a faint column to the left of the 1.
-                        // Quantities should only be in increments of 5 anyway (unless it is a quantity of 1.)
-                        if (parsedInt == 11)
-                        {
-                            overrideLineText = line.Text.Replace("11", "1");
-                            Log.Information("Handled Low confidence integer found. OrderString {OrderString}, Integer {Integer}- overriden to 1.", orderStr, parsedInt);
-                            wasLineOverriden = true;
-                        }
-                        else
-                        {
-                            Log.Warning("Unhandled Low confidence integer found- skipping order. OrderString {OrderString}, Integer {Integer}", orderStr, parsedInt);
-                            lowConfidenceSkip = true;
-                        }
-                    }
-                }
+                string? overrideLineText = OverrideLowConfidenceLine(line, orderStr, intConfidenceThreshold, symbolConfidenceThreshold, out bool lowConfidenceSkipThisLine);
+                lowConfidenceSkip = lowConfidenceSkip || lowConfidenceSkipThisLine;
+                wasLineOverriden = wasLineOverriden || overrideLineText != null;
                 string text = overrideLineText ?? line.Text;
-
-                if (text == "Butterfly" || text == "Vertical")
-                {
-                    isComplexOrder = true;
-                    continue;
-                }
 
                 string? normalizedOptionSymbol = TryNormalizeOptionSymbol(text);
                 if (normalizedOptionSymbol != null)
@@ -130,6 +148,20 @@ namespace LottoXService
                     orderStr = normalizedOptionSymbol;
                     symbol = normalizedOptionSymbol;
                     continue;
+                }
+
+                if (text == "Butterfly" || text == "Vertical")
+                {
+                    isComplexOrder = true;
+                    continue;
+                }
+
+                // Orders may be mistakenly labeled as WMM orders. If there is a current position
+                // corresponding to a "WMM"- tagged order, we should assume it is mistagged and relevant.
+                if (text == "LTX" || 
+                    (text == "WMM" && currentPositionSymbols.Contains(symbol)))
+                {
+                    isLTXOrApprovedWMM = true;
                 }
 
                 // Date string comes at the end of an order, so we finalize and reset here.
@@ -161,14 +193,6 @@ namespace LottoXService
                     isComplexOrder = false;
                     wasLineOverriden = false;
                     continue;
-                }
-
-                // Orders may be mistakenly labeled as WMM orders. If there is a current position
-                // corresponding to a "WMM"- tagged order, we should assume it is mistagged/relevant.
-                if (text == "LTX" || 
-                    (text == "WMM" && currentPositionSymbols.Contains(symbol)))
-                {
-                    isLTXOrApprovedWMM = true;
                 }
 
                 orderStr += " " + text;
@@ -207,7 +231,7 @@ namespace LottoXService
         {
             if (orderStrings.Count() == 0) return new TimeSortedSet<FilledOrder>();
 
-            Regex regex = new Regex(@"^([A-Z]{1,5}_\d{6}[CP]\d+(.\d)?) (\d+[., ]\d+ )?([A-Za-z ]+?) (Market|\d+[., ]\d+) (.*? )?(LTX|WMM) (\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (AM|PM))");
+            Regex regex = new Regex(@"^([A-Z]{1,5}_\d{6}[CP]\d+(.\d)?) (\d+[., ]\d+ )?([A-Za-z ]+?) (Market|\d+[., ]\d+) (.*? )?(Single )?(LTX|WMM) (\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (AM|PM))");
 
             TimeSortedSet<FilledOrder> orders = new TimeSortedSet<FilledOrder>();
             foreach (string orderStr in orderStrings)
@@ -246,12 +270,12 @@ namespace LottoXService
                     Log.Information("!!!!! Could not parse quantity from order. Assuming 1. Extracted text: " + orderStr);
                     quantity = 1;
                 }
-                DateTime time = DateTime.Parse(matches[8]);
+                DateTime time = DateTime.Parse(matches[9]);
 
                 FilledOrder order = new FilledOrder(symbol, price, instruction, orderType, limit, quantity, time);
                 orders.Add(order);
 
-                if (matches[7] == "WMM")
+                if (matches[8] == "WMM")
                 {
                     Log.Warning("WMM order encountered for existing LottoX position. Treating as LTX order. Symbol {Symbol}, Order {@FilledOrder}", symbol, order);
                 }

@@ -12,7 +12,7 @@ namespace RagingBull
 {
     public abstract class RagingBullClient : LivePortfolioClient
     {
-        public RagingBullClient(RagingBullConfig config, PortfolioDatabase positionDB) : base(positionDB)
+        public RagingBullClient(RagingBullConfig config, PortfolioDatabase positionDB, IMarketDataClient marketDataClient) : base(positionDB, marketDataClient)
         {
             Email = config.Email;
             Password = config.Password;
@@ -28,6 +28,10 @@ namespace RagingBull
 
         public override async Task<bool> Logout()
         {
+            if (!await IsLoggedIn())
+            {
+                return true;
+            }
             Log.Information("Logging out of RagingBull");
             try
             {

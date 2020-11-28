@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace Core.Model
 {
-    public class LiveOrdersResult
+    public class UnvalidatedLiveOrdersResult
     {
-        public LiveOrdersResult(TimeSortedSet<FilledOrderAndQuote> liveOrdersAndQuotes, bool skippedOrderDueToLowConfidence)
+        public UnvalidatedLiveOrdersResult(TimeSortedSet<FilledOrder> liveOrders, bool skippedOrderDueToLowConfidence)
         {
-            LiveOrdersAndQuotes = liveOrdersAndQuotes;
+            LiveOrders = liveOrders;
             SkippedOrderDueToLowConfidence = skippedOrderDueToLowConfidence;
         }
 
-        public TimeSortedSet<FilledOrderAndQuote> LiveOrdersAndQuotes { get; }
+        public TimeSortedSet<FilledOrder> LiveOrders { get; }
         public bool SkippedOrderDueToLowConfidence { get; }
     }
 }

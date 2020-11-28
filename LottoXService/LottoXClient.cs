@@ -15,7 +15,7 @@ namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PortfolioDatabase positionDB) : base(rbConfig, positionDB)
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PortfolioDatabase positionDB, IMarketDataClient marketDataClient) : base(rbConfig, positionDB, marketDataClient)
         {
             ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
             ImageToOrdersConverter = new ImageToOrdersConverter(ocrConfig);
@@ -88,7 +88,7 @@ namespace LottoXService
         }
 
         // TODO: Remove first part of tuple
-        protected override async Task<LiveOrdersResult> RecognizeLiveOrders()
+        protected override async Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders()
         {
             IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
             string filepath = GetNextOrdersFilepath();
@@ -101,7 +101,7 @@ namespace LottoXService
         }
 
         // TODO: Remove first part of tuple
-        protected override async Task<LiveOrdersResult> RecognizeLiveOrders(string ordersFilepath)
+        protected override async Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders(string ordersFilepath)
         {
             IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
             return await ImageToOrdersConverter.GetFilledOrdersFromImage(ordersFilepath, currentPositionSymbols);

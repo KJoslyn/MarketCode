@@ -61,14 +61,9 @@ namespace Database
 
         protected override bool OrderAlreadyExists(FilledOrder order)
         {
-            FilledOrder? existingOrder = null;
-            try
-            {
-                existingOrder = _db.GetCollection<FilledOrder>()
-                    .FindOne(o => o.StrictEquals(order));
-            } catch (Exception ex)
-            {
-            }
+            // FindOne() using o.StrictEquals() throws a LiteDB exception dealing with
+            // inability to convert to BSON expression.
+            FilledOrder? existingOrder = _db.GetCollection<FilledOrder>().FindById(order.Id);
             return existingOrder != null;
         }
 
@@ -102,7 +97,8 @@ namespace Database
         {
             foreach(FilledOrder order in orders)
             {
-                _db.GetCollection<FilledOrder>().DeleteMany(o => o.StrictEquals(order));
+                _db.GetCollection<FilledOrder>().Delete(order.Id);
+                //_db.GetCollection<FilledOrder>().DeleteMany(o => o.StrictEquals(order));
             }
         }
     }

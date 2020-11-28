@@ -24,19 +24,25 @@ namespace Core
         private IBrokerClient BrokerClient { get; }
         private IMarketDataClient MarketDataClient { get; }
 
-        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedSet<PositionDelta> deltas)
+        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedSet<PositionDelta> deltas, Dictionary<string, OptionQuote>? quotes = null)
         {
-            IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta))
+            IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta, quotes?.GetValueOrDefault(delta.Symbol)))
                 .OfType<Order>(); // filter out nulls
             return RemoveBuysIfSellExistsForSameSymbol(orders);
         }
 
-        private Order? DecideOrder(PositionDelta delta)
+        private Order? DecideOrder(PositionDelta delta, OptionQuote? quote)
         {
             // TODO: Remove after testing
             //Log.Warning("Not getting real quote");
             //OptionQuote quote = new OptionQuote(delta.Symbol, delta.Price * (float).99, delta.Price * (float)1.01, delta.Price, delta.Price * (float)1.06, (float)1.0);
-            OptionQuote quote = MarketDataClient.GetQuote(delta.Symbol);
+            
+            if (quote == null ||
+                quote.Time < DateTime.Now.AddSeconds(-15))
+            {
+                Log.Information("Getting new quote. Old quote- {@Quote}", quote);
+                quote = MarketDataClient.GetQuote(delta.Symbol);
+            }
             Log.Information("{DeltaType} delta {@Delta}- current mark price {Mark}. Symbol {Symbol}", delta.DeltaType, delta, quote.Mark.ToString("0.00"), delta.Symbol);
 
             Position? currentPos = BrokerClient.GetPosition(delta.Symbol);

@@ -96,12 +96,12 @@ namespace TDAmeritrade
 
         public void PlaceOrder(Order order)
         {
-            throw new System.NotImplementedException();
             RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
             RestRequest request = CreateRequest(Method.POST);
             string body = CreateOrderBody(order);
             request.AddJsonBody(body);
             IRestResponse response = ExecuteRequest(client, request);
+            Log.Information("Response: {@Response}", response);
             // TODO: make sure ok
         }
 

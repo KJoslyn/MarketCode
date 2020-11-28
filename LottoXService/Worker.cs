@@ -1,6 +1,7 @@
 using AzureOCR;
 using Core;
 using Core.Model;
+using Core.Model.Constants;
 using Database;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -42,18 +43,20 @@ namespace LottoXService
             _generalConfig = generalOptions.Value;
             _orderConfig = orderOptions.Value;
 
-            PortfolioDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
-            LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase);
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
+            PortfolioDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
+            LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase, MarketDataClient);
 
             if (_generalConfig.UsePaperTrade)
             {
+                Log.Information("PAPER TRADING");
                 PortfolioDatabase paperDatabase = new LitePositionDatabase(_generalConfig.PaperTradeDatabasePath);
                 BrokerClient = new PaperTradeBrokerClient(paperDatabase, MarketDataClient);
             }
             else
             {
+                Log.Information("*****Trading with real account");
                 BrokerClient = tdClient; 
             }
             OrderManager = new OrderManager(BrokerClient, MarketDataClient, _orderConfig);
@@ -82,13 +85,22 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            OptionQuote quote = MarketDataClient.GetQuote("AAPL_201218C140");
+            //OptionQuote quote = MarketDataClient.GetQuote("AAPL_121820C140");
+            Order o1 = new Order("AAPL_201218C140", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.07);
+            BrokerClient.PlaceOrder(o1);
+            Log.Information("Placing Order: {@Order}", o1);
+
+
+            return;
+
             if (!MarketDataClient.IsMarketOpenToday())
             {
                 Log.Information("Market closed today");
                 return;
             }
-            //Log.Information("NOT LOGGING IN");
-            await LivePortfolioClient.Login();
+            Log.Information("NOT LOGGING IN");
+            //await LivePortfolioClient.Login();
 
             TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
             TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
@@ -100,8 +112,8 @@ namespace LottoXService
             // TODO: Remove lastTopOrderDateTime
             string lastTopOrderDateTime = "";
 
-            //string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-3941.png";
-            string seedOrdersFilename = "";
+            string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4112.png";
+            //string seedOrdersFilename = "";
 
             bool lastParseSkippedDeltaDueToLowConfidence = false;
 
@@ -116,9 +128,9 @@ namespace LottoXService
                 }
                 else if (now <= marketOpenTime)
                 {
-                    //Log.Warning("Market not open yet!");
-                    //// Or, wait until 9:30am
-                    //await Task.Delay(30*1000, stoppingToken);
+                    Log.Information("Market not open yet!");
+                    // Or, wait until 9:30am
+                    await Task.Delay(30 * 1000, stoppingToken);
 
                     //continue;
                 }
@@ -135,17 +147,21 @@ namespace LottoXService
                     }
                     else if (lastParseSkippedDeltaDueToLowConfidence)
                     {
+                        return;
+
                         Log.Information("***Last parse skipped delta due to low confidence. Trying again.");
                         result = await LivePortfolioClient.GetLiveDeltasFromOrders();
                     }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
+                        return;
+
                         Log.Information("***Change in top orders detected- getting live orders");
                         result = await LivePortfolioClient.GetLiveDeltasFromOrders();
                     }
                     else
                     {
-                        result = new LiveDeltasResult(new TimeSortedSet<PositionDelta>(), false);
+                        result = new LiveDeltasResult(new TimeSortedSet<PositionDelta>(), new Dictionary<string, OptionQuote>(), false);
                     }
 
                     lastParseSkippedDeltaDueToLowConfidence = result.SkippedDeltaDueToLowConfidence;
@@ -177,7 +193,7 @@ namespace LottoXService
 
                     //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
 
-                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(result.LiveDeltas);
+                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(result.LiveDeltas, result.Quotes);
 
                     foreach (Order order in orders)
                     {
@@ -234,63 +250,3 @@ namespace LottoXService
         }
     }
 }
-            //ImageConsistencyClient con = new ImageConsistencyClient();
-            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantitiesTest1.png");
-            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantitiesTest2.png");
-            //return;
-
-            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio.png");
-            //con.TestAndSetCurrentImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.png");
-
-
-            //MarketDataClient.GetQuote("AAPL_201120C115");
-            //IList<Position> positions = BrokerClient.GetPositions();
-
-            //string symbol = "SFIX_201120C35";
-            //string symbol = "SFIX";
-            //OptionQuote quote = MarketDataClient.GetQuote(symbol);
-
-            //Log.Information("Quote: {@Quote}", quote);
-
-            //try
-            //{
-            //    //(IList<Position> livePositions, IList<PositionDelta> deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas();
-
-            //    IList<Position> livePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
-            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json",
-            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/1.json");
-
-            //    Console.WriteLine(livePositions);
-
-            //    IList<Position> offlinePositions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage(
-            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json",
-            //        "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/offline.json");
-
-            //    Console.WriteLine(offlinePositions);
-
-            //} catch (InvalidPortfolioStateException ex)
-            //{
-            //    // TODO: Email/text notification???
-            //    Console.WriteLine("Invalid portfolio state");
-            //}
-
-            //DeltaList list;
-            //using (StreamReader r = new StreamReader("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/deltas.json"))
-            //{
-            //    string json = r.ReadToEnd();
-            //    list = JsonConvert.DeserializeObject<DeltaList>(json);
-            //}
-            //IList<PositionDelta> deltaList = list.Deltas;
-
-            //await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
-
-            //return;
-
-            //foreach (PositionDelta delta in deltaList)
-            //{
-            //    Order? order = OrderManager.DecideOrder(delta);
-            //    if (order != null)
-            //    {
-            //        BrokerClient.PlaceOrder(order);
-            //    }
-            //}

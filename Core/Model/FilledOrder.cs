@@ -29,6 +29,7 @@ namespace Core.Model
 
         public FilledOrder() { }
 
+        public string Id { get => Symbol + Time.ToString() + Instruction + OrderType + Quantity.ToString() + Quantity.ToString() + Price.ToString("0.00"); }
         public string Symbol { get; init; }
         public float Price { get; init; }
         public string Instruction { get; init; }
@@ -50,7 +51,7 @@ namespace Core.Model
         public bool StrictEquals(FilledOrder other)
         {
             return EqualsIgnoreTime(other) &&
-                Time == other.Time;
+                Time.Equals(other.Time);
         }
     }
 }
