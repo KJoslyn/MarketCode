@@ -121,7 +121,7 @@ namespace Core
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.MARKET)
             {
                 orderType = OrderType.MARKET;
-                quantity = DecideBuyQuantity(quote.Ask, delta, currentPos); // Assume we will pay the ask price
+                quantity = DecideBuyQuantity(quote.AskPrice, delta, currentPos); // Assume we will pay the ask price
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.DELTA_LIMIT ||
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.DELTA_LIMIT)

@@ -85,8 +85,15 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            OptionQuote quote = MarketDataClient.GetQuote("AAPL_201218C140");
-            //OptionQuote quote = MarketDataClient.GetQuote("AAPL_121820C140");
+            try
+            {
+                OptionQuote quote = MarketDataClient.GetQuote("AAPL_121820C140");
+                //OptionQuote quote = MarketDataClient.GetQuote("AAPL_121819C140");
+            }
+            catch (Exception ex)
+            {
+                Log.Information(ex, "hello");
+            }
             Order o1 = new Order("AAPL_201218C140", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.07);
             BrokerClient.PlaceOrder(o1);
             Log.Information("Placing Order: {@Order}", o1);

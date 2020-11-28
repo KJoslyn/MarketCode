@@ -59,30 +59,16 @@ namespace TDAmeritrade
 
         public OptionQuote GetQuote(string symbol)
         {
-            Regex optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+(.\d)?)");
-            GroupCollection matchGroups = optionSymbolRegex.Match(symbol).Groups;
-            string equitySymbol = matchGroups[1].Value;
-            string date = DateTime.ParseExact(matchGroups[2].Value, "yyMMdd", CultureInfo.InvariantCulture)
-                .ToString("yyyy-MM-dd");
-            string contractType = matchGroups[3].Value == "C"
-                ? PutCall.CALL
-                : PutCall.PUT;
-            string strike = matchGroups[4].Value;
-
-            RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/chains");
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/" + symbol + "/quotes");
             RestRequest request = CreateRequest(Method.GET);
-            request.AddQueryParameter("symbol", equitySymbol);
-            request.AddQueryParameter("contractType", contractType);
-            request.AddQueryParameter("includeQuotes", "TRUE");
-            request.AddQueryParameter("strike", strike);
-            request.AddQueryParameter("fromDate", date);
-            request.AddQueryParameter("toDate", date);
             IRestResponse response = ExecuteRequest(client, request);
-
-            Regex responseRegex = new Regex("({\"putCall\".*})]");
-            GroupCollection responseMatchGroups = responseRegex.Match(response.Content).Groups;
-            string optionQuoteStr = responseMatchGroups[1].Value;
-            OptionQuote quote = JsonConvert.DeserializeObject<OptionQuote>(optionQuoteStr);
+            if (!response.IsSuccessful || response.Content.Contains("Symbol not found"))
+            {
+                throw new MarketDataException("Get quote unsuccessful for symbol " + symbol);
+            }
+            Regex responseRegex = new Regex("{\"assetType.*?}");
+            Match match = responseRegex.Match(response.Content);
+            OptionQuote quote = JsonConvert.DeserializeObject<OptionQuote>(match.Value);
             return quote;
         }
 
@@ -146,6 +132,35 @@ namespace TDAmeritrade
             Log.Information("TDAm Order: {@Order}, string: {OrderStr}, Symbol {Symbol}", orderBody, orderBodyStr, order.Symbol);
             return orderBodyStr;
         }
+
+        //public OptionQuote GetQuote(string symbol)
+        //{
+        //    Regex optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+(.\d)?)");
+        //    GroupCollection matchGroups = optionSymbolRegex.Match(symbol).Groups;
+        //    string equitySymbol = matchGroups[1].Value;
+        //    string date = DateTime.ParseExact(matchGroups[2].Value, "yyMMdd", CultureInfo.InvariantCulture)
+        //        .ToString("yyyy-MM-dd");
+        //    string contractType = matchGroups[3].Value == "C"
+        //        ? PutCall.CALL
+        //        : PutCall.PUT;
+        //    string strike = matchGroups[4].Value;
+
+        //    RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/chains");
+        //    RestRequest request = CreateRequest(Method.GET);
+        //    request.AddQueryParameter("symbol", equitySymbol);
+        //    request.AddQueryParameter("contractType", contractType);
+        //    request.AddQueryParameter("includeQuotes", "TRUE");
+        //    request.AddQueryParameter("strike", strike);
+        //    request.AddQueryParameter("fromDate", date);
+        //    request.AddQueryParameter("toDate", date);
+        //    IRestResponse response = ExecuteRequest(client, request);
+
+        //    Regex responseRegex = new Regex("({\"putCall\".*})]");
+        //    GroupCollection responseMatchGroups = responseRegex.Match(response.Content).Groups;
+        //    string optionQuoteStr = responseMatchGroups[1].Value;
+        //    OptionQuote quote = JsonConvert.DeserializeObject<OptionQuote>(optionQuoteStr);
+        //    return quote;
+        //}
     }
 }
 

@@ -92,7 +92,7 @@ namespace Core
                 else
                 {
                     OptionQuote quote = MarketDataClient.GetQuote(order.Symbol);
-                    price = quote.Ask;
+                    price = quote.AskPrice;
                 }
             }
 
@@ -127,7 +127,7 @@ namespace Core
                 else
                 {
                     OptionQuote quote = MarketDataClient.GetQuote(order.Symbol);
-                    price = quote.Bid;
+                    price = quote.BidPrice;
                 }
             }
 

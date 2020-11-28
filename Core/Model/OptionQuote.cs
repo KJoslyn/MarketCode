@@ -11,9 +11,9 @@ namespace Core.Model
         public OptionQuote(string symbol, float bid, float ask, float last, float mark, float mult, float hi, float low, long longTime)
         {
             Symbol = symbol;
-            Bid = bid;
-            Ask = ask;
-            Last = last;
+            BidPrice = bid;
+            AskPrice = ask;
+            LastPrice = last;
             Mark = mark;
             Multiplier = mult;
             HighPrice = hi;
@@ -24,9 +24,9 @@ namespace Core.Model
         private DateTime? _time;
 
         public string Symbol { get; init; }
-        public float Bid { get; init; }
-        public float Ask { get; init; }
-        public float Last { get; init; }
+        public float BidPrice { get; init; }
+        public float AskPrice { get; init; }
+        public float LastPrice { get; init; }
         public float Mark { get; init; }
         public float Multiplier { get; init; }
         public float HighPrice { get; init; }

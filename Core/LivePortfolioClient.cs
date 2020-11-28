@@ -99,22 +99,18 @@ namespace Core
             Dictionary<FilledOrder, OptionQuote> validOrdersAndQuotes = new Dictionary<FilledOrder, OptionQuote>();
             foreach (FilledOrder order in liveOrders)
             {
-                OptionQuote? quote = null;
+                OptionQuote quote;
                 try
                 {
                     quote = MarketDataClient.GetQuote(order.Symbol);
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Invalid symbol {Symbol}", order.Symbol);
+                    Log.Warning(ex, "Error getting quote for symbol {Symbol}", order.Symbol);
                     continue;
                 }
 
-                if (quote == null)
-                {
-                    Log.Warning("Invalid symbol {Symbol}", order.Symbol);
-                }
-                else if (order.Price < quote.LowPrice ||
+                if (order.Price < quote.LowPrice ||
                     order.Price > quote.HighPrice)
                 {
                     Log.Warning("Order price not within day's range- symbol {Symbol}, order {@Order}, quote {@Quote}", order.Symbol, order, quote);
