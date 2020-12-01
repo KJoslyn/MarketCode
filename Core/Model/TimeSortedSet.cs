@@ -15,7 +15,12 @@ namespace Core.Model
         {
             public int Compare(T x, T y)
             {
-                return x.Time.CompareTo(y.Time);
+                int result = x.Time.CompareTo(y.Time);
+
+                // Allow duplicate times! Different orders may have the same fill time.
+                return result == 0
+                    ? 1
+                    : result;
             }
         }
     }
