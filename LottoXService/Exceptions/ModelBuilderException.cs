@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 
 namespace LottoXService.Exceptions
 {
-    public class PositionBuilderException : Exception
+    public class ModelBuilderException : Exception
     {
-        public PositionBuilderException(string message, PositionBuilder builder) : base(message) 
+        public ModelBuilderException(string message, IModelBuilder builder) : base(message) 
         {
             Builder = builder;
         }
 
-        public PositionBuilder Builder { get; init; }
+        public IModelBuilder Builder { get; init; }
     }
 }

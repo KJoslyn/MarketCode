@@ -256,7 +256,7 @@ namespace LottoXService
                     Log.Fatal(ex, "Arument exception encountered");
                     break;
                 }
-                catch (PositionBuilderException ex)
+                catch (ModelBuilderException ex)
                 {
                     Log.Fatal(ex, "Position builder exception encounterd. Builder {@PositionBuilder}", ex.Builder);
                     break;
