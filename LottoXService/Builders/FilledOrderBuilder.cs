@@ -1,6 +1,6 @@
-﻿using Core.Model;
+﻿using AzureOCR;
+using Core.Model;
 using Core.Model.Constants;
-using LottoXService.Exceptions;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
 using System;
@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace LottoXService
 {
-    public class FilledOrderBuilder : ModelBuilder<FilledOrder>
+    public class FilledOrderBuilder : LtxModelBuilder<FilledOrder>
     {
         private BuildLevel _buildLevel = BuildLevel.SYMBOL;
         private int _thisLevelCounter = 0;

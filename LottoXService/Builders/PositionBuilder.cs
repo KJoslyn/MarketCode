@@ -1,5 +1,5 @@
-﻿using Core.Model;
-using LottoXService.Exceptions;
+﻿using AzureOCR;
+using Core.Model;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
 using System;
@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace LottoXService
 {
-    public class PositionBuilder : ModelBuilder<Position>
+    public class PositionBuilder : LtxModelBuilder<Position>
     {
         private BuildLevel _buildLevel = BuildLevel.SYMBOL;
 

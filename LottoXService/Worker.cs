@@ -4,7 +4,6 @@ using Core.Exceptions;
 using Core.Model;
 using Core.Model.Constants;
 using Database;
-using LottoXService.Exceptions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;

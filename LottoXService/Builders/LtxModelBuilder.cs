@@ -1,50 +1,29 @@
-﻿using LottoXService.Exceptions;
+﻿using AzureOCR;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-#nullable enable
 
 namespace LottoXService
 {
-    public abstract class ModelBuilder<T> : IModelBuilder
+    public abstract class LtxModelBuilder<T> : ModelBuilder<T>
     {
         protected string _currentStr = "";
-
         protected Regex _optionSymbolRegexUnnormalized = new Regex(@"[A-Z]{1,5} \d{6}[CP]\d+([., ]\d)?$");
         protected Regex _priceRegex = new Regex(@"\d+[., ]\d+");
         protected Regex _spaceOrComma = new Regex("[ ,]");
 
-        public ModelBuilder() 
+        public LtxModelBuilder() 
         {
             Symbol = "";
         }
 
-        public abstract bool Done { get; }
         protected string Symbol { get; set; }
         protected int Quantity { get; set; }
-
-        public abstract void TakeNextWord(Word word);
-
-        public T BuildAndReset()
-        {
-            if (!Done)
-            {
-                throw new ModelBuilderException("Build() called too early!", this);
-            }
-            T obj = Build();
-            Reset();
-            return obj;
-        }
-
-        protected abstract T Build();
-        protected abstract void FinishBuildLevel();
-        protected abstract void Reset();
 
         protected void TakeSymbol(Word word)
         {

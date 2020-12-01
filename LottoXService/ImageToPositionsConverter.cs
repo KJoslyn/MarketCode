@@ -33,7 +33,8 @@ namespace LottoXService
                 throw ex;
             }
 
-            return CreatePositions(lines);
+            PositionBuilder builder = new PositionBuilder();
+            return builder.CreateModels(lines).ToList();
         }
 
         private bool ValidatePositionsColumnHeaders(List<string> lineTexts)
@@ -52,25 +53,6 @@ namespace LottoXService
             Regex headersRegex = new Regex("^Symbol (. )?Quantity Last Aver");
 
             return headersRegex.IsMatch(joined);
-        }
-
-        private List<Position> CreatePositions(IList<Line> lines)
-        {
-            List<Position> positions = new List<Position>();
-            PositionBuilder builder = new PositionBuilder();
-            foreach (Line line in lines)
-            {
-                foreach (Word word in line.Words)
-                {
-                    builder.TakeNextWord(word);
-                    if (builder.Done)
-                    {
-                        Position pos = builder.BuildAndReset();
-                        positions.Add(pos);
-                    }
-                }
-            }
-            return positions;
         }
     }
 }
