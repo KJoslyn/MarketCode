@@ -86,6 +86,13 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            TimeSortedCollection<FilledOrder> liveOrders = new TimeSortedCollection<FilledOrder>();
+            liveOrders.Add(new FilledOrder("NIO_201204C55", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 25, 33)));
+            liveOrders.Add(new FilledOrder("NIO_201204C60", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 22, 30)));
+            liveOrders.Add(new FilledOrder("NIO_201204C62", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 22, 30)));
+            liveOrders.Add(new FilledOrder("NIO_201204C65", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 30, 00)));
+            LivePortfolioClient.IdentifyNewAndUpdatedOrders(liveOrders, 260);
+
             //IEnumerable<Position> positions = BrokerClient.GetPositions();
             //OptionQuote quote;
             //try
@@ -101,9 +108,9 @@ namespace LottoXService
             //BrokerClient.PlaceOrder(o1);
             //Log.Information("Placing Order: {@Order}", o1);
 
-            IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4370.png");
+            //IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4380.png");
 
-
+            Log.Information("RETURNING EARLY");
             return;
 
             if (!MarketDataClient.IsMarketOpenToday())
@@ -124,8 +131,8 @@ namespace LottoXService
             // TODO: Remove lastTopOrderDateTime
             string lastTopOrderDateTime = "";
 
-            string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4173.png";
-            //string seedOrdersFilename = "";
+            //string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4173.png";
+            string seedOrdersFilename = "";
 
             bool lastParseSkippedDeltaDueToLowConfidence = false;
 
@@ -163,7 +170,7 @@ namespace LottoXService
                         result = await LivePortfolioClient.GetLiveDeltasFromOrders();
                         if (result.LiveDeltas.Count > 0 )
                         {
-                            await LivePortfolioClient.CheckLivePositionsAgainstDatabase();
+                            await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
                         }
                     }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
@@ -172,12 +179,12 @@ namespace LottoXService
                         result = await LivePortfolioClient.GetLiveDeltasFromOrders();
                         if (result.LiveDeltas.Count > 0 )
                         {
-                            await LivePortfolioClient.CheckLivePositionsAgainstDatabase();
+                            await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
                         }
                     }
                     else
                     {
-                        result = new LiveDeltasResult(new TimeSortedSet<PositionDelta>(), new Dictionary<string, OptionQuote>(), false);
+                        result = new LiveDeltasResult(new TimeSortedCollection<PositionDelta>(), new Dictionary<string, OptionQuote>(), false);
                     }
 
                     lastParseSkippedDeltaDueToLowConfidence = result.SkippedDeltaDueToLowConfidence;
@@ -257,7 +264,7 @@ namespace LottoXService
                 }
                 catch (ModelBuilderException ex)
                 {
-                    Log.Fatal(ex, "Position builder exception encounterd. Builder {@PositionBuilder}", ex.Builder);
+                    Log.Fatal(ex, "Model builder exception encountered. Builder {@ModelBuilder}", ex.Builder);
                     break;
                 }
                 catch (Exception ex)

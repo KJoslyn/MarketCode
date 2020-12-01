@@ -8,13 +8,13 @@ namespace Core.Model
 {
     public class NewAndUpdatedFilledOrders
     {
-        public NewAndUpdatedFilledOrders(TimeSortedSet<FilledOrder> newFilledOrders, IEnumerable<UpdatedFilledOrder> updatedFilledOrders)
+        public NewAndUpdatedFilledOrders(TimeSortedCollection<FilledOrder> newFilledOrders, IEnumerable<UpdatedFilledOrder> updatedFilledOrders)
         {
             NewFilledOrders = newFilledOrders;
             UpdatedFilledOrders = updatedFilledOrders;
         }
 
-        public TimeSortedSet<FilledOrder> NewFilledOrders { get; }
+        public TimeSortedCollection<FilledOrder> NewFilledOrders { get; }
         public IEnumerable<UpdatedFilledOrder> UpdatedFilledOrders { get; }
     }
 }

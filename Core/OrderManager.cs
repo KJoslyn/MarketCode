@@ -24,7 +24,7 @@ namespace Core
         private IBrokerClient BrokerClient { get; }
         private IMarketDataClient MarketDataClient { get; }
 
-        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedSet<PositionDelta> deltas, Dictionary<string, OptionQuote>? quotes = null)
+        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedCollection<PositionDelta> deltas, Dictionary<string, OptionQuote>? quotes = null)
         {
             IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta, quotes?.GetValueOrDefault(delta.Symbol)))
                 .OfType<Order>(); // filter out nulls

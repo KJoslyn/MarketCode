@@ -8,13 +8,13 @@ namespace Core.Model
 {
     public class UnvalidatedLiveOrdersResult
     {
-        public UnvalidatedLiveOrdersResult(TimeSortedSet<FilledOrder> liveOrders, bool skippedOrderDueToLowConfidence)
+        public UnvalidatedLiveOrdersResult(TimeSortedCollection<FilledOrder> liveOrders, bool skippedOrderDueToLowConfidence)
         {
             LiveOrders = liveOrders;
             SkippedOrderDueToLowConfidence = skippedOrderDueToLowConfidence;
         }
 
-        public TimeSortedSet<FilledOrder> LiveOrders { get; }
+        public TimeSortedCollection<FilledOrder> LiveOrders { get; }
         public bool SkippedOrderDueToLowConfidence { get; }
     }
 }

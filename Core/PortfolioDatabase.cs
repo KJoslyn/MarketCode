@@ -12,9 +12,9 @@ namespace Core
     {
         public abstract IEnumerable<Position> GetStoredPositions();
 
-        public abstract TimeSortedSet<PositionDelta> GetStoredDeltas();
+        public abstract TimeSortedCollection<PositionDelta> GetStoredDeltas();
 
-        public abstract TimeSortedSet<FilledOrder> GetStoredOrders();
+        public abstract TimeSortedCollection<FilledOrder> GetStoredOrders();
 
         public abstract void InsertOrders(IEnumerable<FilledOrder> orders);
 
@@ -30,17 +30,17 @@ namespace Core
 
         public abstract void DeletePosition(Position position);
 
-        public abstract TimeSortedSet<FilledOrder> GetTodaysFilledOrders();
+        public abstract TimeSortedCollection<FilledOrder> GetTodaysFilledOrders();
 
         protected abstract bool OrderAlreadyExists(FilledOrder order);
 
         protected abstract Position? GetPosition(string symbol);
 
-        public TimeSortedSet<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedSet<FilledOrder> newOrders)
+        public TimeSortedCollection<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedCollection<FilledOrder> newOrders)
         {
             InsertOrders(newOrders);
 
-            TimeSortedSet<PositionDelta> deltas = new TimeSortedSet<PositionDelta>();
+            TimeSortedCollection<PositionDelta> deltas = new TimeSortedCollection<PositionDelta>();
             foreach (FilledOrder order in newOrders)
             {
                 Position? oldPos = GetPosition(order.Symbol);
@@ -180,14 +180,14 @@ namespace Core
             InsertOrders(newOrders);
         }
 
-        public NewAndUpdatedFilledOrders IdentifyNewAndUpdatedOrders(TimeSortedSet<FilledOrder> liveOrders, double lookbackMinutes)
+        public NewAndUpdatedFilledOrders IdentifyNewAndUpdatedOrders(TimeSortedCollection<FilledOrder> liveOrders, double lookbackMinutes)
         {
             DateTime cutoffTime = DateTime.Now.AddMinutes(-lookbackMinutes);
 
             NewAndUpdatedFilledOrders recentOrdersResult = IdentifyRecentNewAndUpdatedOrders(liveOrders, cutoffTime);
-            TimeSortedSet<FilledOrder> oldUnseenOrders = IdentifyOldUnseenOrders(liveOrders, cutoffTime);
+            TimeSortedCollection<FilledOrder> oldUnseenOrders = IdentifyOldUnseenOrders(liveOrders, cutoffTime);
 
-            TimeSortedSet<FilledOrder> allNewOrders = new TimeSortedSet<FilledOrder>(recentOrdersResult.NewFilledOrders);
+            TimeSortedCollection<FilledOrder> allNewOrders = new TimeSortedCollection<FilledOrder>(recentOrdersResult.NewFilledOrders);
             foreach(FilledOrder oldUnseen in oldUnseenOrders)
             {
                 allNewOrders.Add(oldUnseen);
@@ -196,21 +196,21 @@ namespace Core
             return new NewAndUpdatedFilledOrders(allNewOrders, recentOrdersResult.UpdatedFilledOrders);
         }
 
-        private NewAndUpdatedFilledOrders IdentifyRecentNewAndUpdatedOrders(TimeSortedSet<FilledOrder> liveOrders, DateTime lookAfterTime)
+        private NewAndUpdatedFilledOrders IdentifyRecentNewAndUpdatedOrders(TimeSortedCollection<FilledOrder> liveOrders, DateTime lookAfterTime)
         {
             // After the matching process, any unmatched filled orders will be the new filled orders
-            TimeSortedSet<FilledOrder> unmatchedRecentLiveOrders = new TimeSortedSet<FilledOrder>(
+            TimeSortedCollection<FilledOrder> unmatchedRecentLiveOrders = new TimeSortedCollection<FilledOrder>(
                 liveOrders.Where(order => order.Time >= lookAfterTime));
             IList<UpdatedFilledOrder> updatedFilledOrders = new List<UpdatedFilledOrder>();
 
             // Only retrieve orders from the last "lookbackMinutes" minutes (call it X) for matching. This assumes that:
             // 1) Order times will not be updated AFTER X minutes
             // 2) It takes longer than X minutes for every visible order in the live portfolio to be pushed out of view
-            TimeSortedSet<FilledOrder> unmatchedRecentDbOrders = new TimeSortedSet<FilledOrder>(
+            TimeSortedCollection<FilledOrder> unmatchedRecentDbOrders = new TimeSortedCollection<FilledOrder>(
                 GetTodaysFilledOrders().Where(order => order.Time >= lookAfterTime));
 
-            // 1st pass: Match with exact time
-            foreach (FilledOrder dbOrder in unmatchedRecentDbOrders.ToList())
+            // 1st pass: Match with exact time. DO NOT use ToList(), since it creates a copy of each of the items!
+            foreach (FilledOrder dbOrder in unmatchedRecentDbOrders)
             {
                 FilledOrder? match = unmatchedRecentLiveOrders.FirstOrDefault(o => dbOrder.StrictEquals(o));
                 if (match != null)
@@ -222,7 +222,7 @@ namespace Core
             // 2nd pass: Match using closest time
             foreach (FilledOrder dbOrder in unmatchedRecentDbOrders)
             {
-                FilledOrder? match = unmatchedRecentLiveOrders.Where(o => dbOrder.EqualsIgnoreTime(o) && o.Time >= dbOrder.Time).FirstOrDefault();
+                FilledOrder? match = unmatchedRecentLiveOrders.Where(o => dbOrder.EqualsIgnoreTime(o) && o.Time > dbOrder.Time).FirstOrDefault();
                 if (match != null)
                 {
                     unmatchedRecentLiveOrders.Remove(match);
@@ -238,16 +238,16 @@ namespace Core
                 }
             }
 
-            TimeSortedSet<FilledOrder> newOrders = new TimeSortedSet<FilledOrder>(unmatchedRecentLiveOrders);
+            TimeSortedCollection<FilledOrder> newOrders = new TimeSortedCollection<FilledOrder>(unmatchedRecentLiveOrders);
             return new NewAndUpdatedFilledOrders(newOrders, updatedFilledOrders);
         }
 
-        private TimeSortedSet<FilledOrder> IdentifyOldUnseenOrders(TimeSortedSet<FilledOrder> liveOrders, DateTime lookBeforeTime)
+        private TimeSortedCollection<FilledOrder> IdentifyOldUnseenOrders(TimeSortedCollection<FilledOrder> liveOrders, DateTime lookBeforeTime)
         {
-            TimeSortedSet<FilledOrder> unseenOrders = new TimeSortedSet<FilledOrder>();
+            TimeSortedCollection<FilledOrder> unseenOrders = new TimeSortedCollection<FilledOrder>();
 
             // Add any older olders that have not been seen before to the "newOrders" set.
-            TimeSortedSet<FilledOrder> oldLiveOrders = new TimeSortedSet<FilledOrder>(
+            TimeSortedCollection<FilledOrder> oldLiveOrders = new TimeSortedCollection<FilledOrder>(
                 liveOrders.Where(order => order.Time < lookBeforeTime));
             foreach(FilledOrder oldLiveOrder in oldLiveOrders.Where(o => !OrderAlreadyExists(o)))
             {

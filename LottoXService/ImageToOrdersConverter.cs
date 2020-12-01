@@ -21,7 +21,6 @@ namespace LottoXService
 
         public ImageToOrdersConverter(OCRConfig config) : base(config) { }
 
-        // TODO: Remove first part of tuple
         public async Task<UnvalidatedLiveOrdersResult> GetFilledOrdersFromImage(
             string filePath,
             IList<string> currentPositionSymbols,
@@ -40,11 +39,16 @@ namespace LottoXService
                 throw ex;
             }
 
-            IEnumerable<string> orderStrings;
-            // TODO: Don't hardcode .93 or .92
-            bool skippedOrderDueToLowConfidence = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, 0.92, out orderStrings);
+            FilledOrderBuilder builder = new FilledOrderBuilder(currentPositionSymbols);
+            IEnumerable<FilledOrder> orders = builder.CreateModels(lines);
 
-            return new UnvalidatedLiveOrdersResult(CreateFilledOrders(orderStrings), skippedOrderDueToLowConfidence);
+            return new UnvalidatedLiveOrdersResult(new TimeSortedCollection<FilledOrder>(orders), false);
+
+            //IEnumerable<string> orderStrings;
+            //// TODO: Don't hardcode .93 or .92
+            //bool skippedOrderDueToLowConfidence = GetLottoxOrderStrings(lines, currentPositionSymbols, 0.93, 0.92, out orderStrings);
+
+            //return new UnvalidatedLiveOrdersResult(CreateFilledOrders(orderStrings), skippedOrderDueToLowConfidence);
         }
 
         private string GetFirstNormalizedDateTime(List<string> lineTexts)
@@ -233,13 +237,13 @@ namespace LottoXService
         /// LottoX order, where the option symbol and DateTime are correct.
         /// We allow filled and limit prices to mistakenly include a space or comma in place of a period, and correct that here.
         /// </summary>
-        private TimeSortedSet<FilledOrder> CreateFilledOrders(IEnumerable<string> orderStrings)
+        private TimeSortedCollection<FilledOrder> CreateFilledOrders(IEnumerable<string> orderStrings)
         {
-            if (orderStrings.Count() == 0) return new TimeSortedSet<FilledOrder>();
+            if (orderStrings.Count() == 0) return new TimeSortedCollection<FilledOrder>();
 
             Regex regex = new Regex(@"^([A-Z]{1,5}_\d{6}[CP]\d+(.\d)?) (\d+[., ]\d+ )?([A-Za-z ]+?) (Market|\d+[., ]\d+) (.*? )?(Single )?(LTX|WMM) (\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (AM|PM))");
 
-            TimeSortedSet<FilledOrder> orders = new TimeSortedSet<FilledOrder>();
+            TimeSortedCollection<FilledOrder> orders = new TimeSortedCollection<FilledOrder>();
             foreach (string orderStr in orderStrings)
             {
                 Match match = regex.Match(orderStr.Replace("|", ""));
