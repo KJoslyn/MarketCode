@@ -3,6 +3,7 @@ using Core;
 using Core.Model;
 using Core.Model.Constants;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using PuppeteerSharp;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -32,11 +33,7 @@ namespace LottoXService
                 throw ex;
             }
 
-            // Get the indices of the lines that are option symbols
-            List<int> symbolIndices = GetSymbolIndices(lines);
-            if (symbolIndices.Count == 0) return new List<Position>();
-
-            return CreatePositions(lineTexts, symbolIndices);
+            return CreatePositions(lines);
         }
 
         private bool ValidatePositionsColumnHeaders(List<string> lineTexts)
@@ -57,45 +54,23 @@ namespace LottoXService
             return headersRegex.IsMatch(joined);
         }
 
-        private List<int> GetSymbolIndices(IList<Line> lines)
-        {
-            Regex symbolRegex = new Regex(@"^[A-Z]{1,5} \d{6}[CP]\d+(.\d)?");
-            return lines
-                .Select((line, index) => new { Line = line, Index = index })
-                .Where(obj => symbolRegex.IsMatch(obj.Line.Text))
-                .Select(obj => obj.Index).ToList();
-        }
-
-        private List<Position> CreatePositions(List<string> lineTexts, List<int> symbolIndices)
+        private List<Position> CreatePositions(IList<Line> lines)
         {
             List<Position> positions = new List<Position>();
-            int numColumns = 7;
-            for (int i = 0; i < symbolIndices.Count; i++)
+            PositionBuilder builder = new PositionBuilder();
+            foreach (Line line in lines)
             {
-                int numLinesInThisSymbol = symbolIndices.Count > i + 1
-                    ? symbolIndices[i + 1] - symbolIndices[i]
-                    : Math.Min(numColumns, lineTexts.Count - symbolIndices[i]);
-
-                List<string> subList = lineTexts.GetRange(symbolIndices[i], numLinesInThisSymbol);
-
-                string joined = string.Join(" ", subList);
-                string normalized = ReplaceFirst(joined, " ", "_");
-                string[] parts = normalized.Split(" ");
-
-                Position position = new Position(parts[0], float.Parse(parts[1]), float.Parse(parts[3]));
-                positions.Add(position);
+                foreach (Word word in line.Words)
+                {
+                    builder.TakeNextWord(word);
+                    if (builder.Done)
+                    {
+                        Position pos = builder.BuildAndReset();
+                        positions.Add(pos);
+                    }
+                }
             }
             return positions;
-        }
-
-        private string ReplaceFirst(string text, string search, string replace)
-        {
-            int pos = text.IndexOf(search);
-            if (pos < 0)
-            {
-                return text;
-            }
-            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
     }
 }

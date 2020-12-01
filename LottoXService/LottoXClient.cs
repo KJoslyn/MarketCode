@@ -75,7 +75,7 @@ namespace LottoXService
             return OrderConsistencyClient.UpdateImageAndCheckHasChanged(filepath, 0.99, groundTruthChanged);
         }
 
-        protected override async Task<IList<Position>> RecognizeLivePositions()
+        public override async Task<IList<Position>> RecognizeLivePositions()
         {
             Log.Information("Getting live positions");
             string filepath = GetNextPortfolioFilepath();
@@ -87,7 +87,6 @@ namespace LottoXService
             return positions;
         }
 
-        // TODO: Remove first part of tuple
         protected override async Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders()
         {
             IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
@@ -100,7 +99,6 @@ namespace LottoXService
             //    currentPositionSymbols);
         }
 
-        // TODO: Remove first part of tuple
         protected override async Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders(string ordersFilepath)
         {
             IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();

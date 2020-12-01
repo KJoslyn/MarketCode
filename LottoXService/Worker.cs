@@ -4,6 +4,7 @@ using Core.Exceptions;
 using Core.Model;
 using Core.Model.Constants;
 using Database;
+using LottoXService.Exceptions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -86,20 +87,22 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            IEnumerable<Position> positions = BrokerClient.GetPositions();
-            OptionQuote quote;
-            try
-            {
-                quote = MarketDataClient.GetOptionQuote("AAPL_201218C140");
-                //OptionQuote quote = MarketDataClient.GetQuote("AAPL_121819C140");
-            }
-            catch (Exception ex)
-            {
-                Log.Information(ex, "hello");
-            }
-            Order o1 = new Order("AAPL_201218C140", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float)0.07);
-            BrokerClient.PlaceOrder(o1);
-            Log.Information("Placing Order: {@Order}", o1);
+            //IEnumerable<Position> positions = BrokerClient.GetPositions();
+            //OptionQuote quote;
+            //try
+            //{
+            //    quote = MarketDataClient.GetOptionQuote("AAPL_201218C140");
+            //    //OptionQuote quote = MarketDataClient.GetQuote("AAPL_121819C140");
+            //}
+            //catch (Exception ex)
+            //{
+            //    Log.Information(ex, "hello");
+            //}
+            //Order o1 = new Order("AAPL_201218C150", 1, InstructionType.SELL_TO_CLOSE, OrderType.MARKET, (float)0.08);
+            //BrokerClient.PlaceOrder(o1);
+            //Log.Information("Placing Order: {@Order}", o1);
+
+            IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4370.png");
 
 
             return;
@@ -109,8 +112,8 @@ namespace LottoXService
                 Log.Information("Market closed today");
                 return;
             }
-            Log.Information("NOT LOGGING IN");
-            //await LivePortfolioClient.Login();
+            //Log.Information("NOT LOGGING IN");
+            await LivePortfolioClient.Login();
 
             TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
             TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
@@ -122,7 +125,7 @@ namespace LottoXService
             // TODO: Remove lastTopOrderDateTime
             string lastTopOrderDateTime = "";
 
-            string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4112.png";
+            string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4173.png";
             //string seedOrdersFilename = "";
 
             bool lastParseSkippedDeltaDueToLowConfidence = false;
@@ -157,17 +160,21 @@ namespace LottoXService
                     }
                     else if (lastParseSkippedDeltaDueToLowConfidence)
                     {
-                        return;
-
                         Log.Information("***Last parse skipped delta due to low confidence. Trying again.");
                         result = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                        if (result.LiveDeltas.Count > 0 )
+                        {
+                            await LivePortfolioClient.CheckLivePositionsAgainstDatabase();
+                        }
                     }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
-                        return;
-
                         Log.Information("***Change in top orders detected- getting live orders");
                         result = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                        if (result.LiveDeltas.Count > 0 )
+                        {
+                            await LivePortfolioClient.CheckLivePositionsAgainstDatabase();
+                        }
                     }
                     else
                     {
@@ -247,6 +254,11 @@ namespace LottoXService
                 catch (ArgumentException ex)
                 {
                     Log.Fatal(ex, "Arument exception encountered");
+                    break;
+                }
+                catch (PositionBuilderException ex)
+                {
+                    Log.Fatal(ex, "Position builder exception encounterd. Builder {@PositionBuilder}", ex.Builder);
                     break;
                 }
                 catch (Exception ex)

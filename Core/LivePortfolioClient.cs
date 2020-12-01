@@ -16,20 +16,26 @@ namespace Core
             MarketDataClient = marketDataClient;
 
             //Log.Information("INSERTING POSITIONS");
-            //Position pos1 = new Position("ACB_201127C7", 50, (float)0.55);
+            //Position pos1 = new Position("ACB_201218C10", 10, (float)0.34);
             //database.InsertPosition(pos1);
-            //Position pos2 = new Position("ACB_201218C10", 100, (float)0.34);
-            //database.InsertPosition(pos2);
-            //Position pos3 = new Position("ACB_201218C7", 50, (float)1.14);
+            //Position pos3 = new Position("ACB_210115C10", 10, (float)0.76);
             //database.InsertPosition(pos3);
-            //Position pos4 = new Position("ACB_201218C8", 50, (float)0.70);
+            //Position pos4 = new Position("ACB_201218C8", 10, (float)0.70);
             //database.InsertPosition(pos4);
-            //Position pos5 = new Position("ACB_210115C10", 20, (float)0.76);
+            //Position pos5 = new Position("FIZZ_201218C115", 30, (float)1.25);
             //database.InsertPosition(pos5);
-            //Position pos6 = new Position("FSLR_201127C87", 20, (float)1.34);
+            //Position pos6 = new Position("FIZZ_201218C100", 10, (float)4.32);
             //database.InsertPosition(pos6);
-            //Position pos7 = new Position("SPWR_201204C21", 20, (float)1.50);
+            //Position pos7 = new Position("GLD_210219C180", 40, (float)2.33);
             //database.InsertPosition(pos7);
+            //Position pos8 = new Position("IGC_201218C1.5", 50, (float)0.45);
+            //database.InsertPosition(pos8);
+            //Position pos9 = new Position("NFLX_201204C530", 60, (float)1.25);
+            //database.InsertPosition(pos9);
+            //Position pos10 = new Position("NFLX_201211C530", 10, (float)3.10);
+            //database.InsertPosition(pos10);
+            //Position pos11 = new Position("NIO_201204C55", 10, (float)2.99);
+            //database.InsertPosition(pos11);
 
             //Position pos1 = new Position("NET_201127C65", 10, (float)2.62);
             //database.InsertPosition(pos1);
@@ -69,16 +75,67 @@ namespace Core
 
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
 
+        // This does not update the database.
+        public abstract Task<IList<Position>> RecognizeLivePositions();
+
         protected abstract Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders();
 
         protected abstract Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders(string ordersFilename);
 
-        // This does not update the database, but the method is not public.
-        protected abstract Task<IList<Position>> RecognizeLivePositions();
+        public IEnumerable<Position> GetStoredPositions() => Database.GetStoredPositions();
+
+        public async Task<bool> CheckLivePositionsAgainstDatabase()
+        {
+
+            IEnumerable<Position> livePositions = await RecognizeLivePositions();
+            IEnumerable<Position> storedPositions = GetStoredPositions();
+            bool result = true;
+
+            if (livePositions.Count() != storedPositions.Count())
+            {
+                result = false;
+            }
+            foreach (Position livePos in livePositions)
+            {
+                Position? matchingStoredPos = storedPositions.FirstOrDefault(
+                    pos => pos.Symbol == livePos.Symbol &&
+                    pos.LongQuantity == livePos.LongQuantity);
+
+                if (matchingStoredPos == null)
+                {
+                    result = false;
+                }
+            }
+            if (!result)
+            {
+                Log.Warning("Stored positions do not match live positions. Stored Positions: {@StoredPositions}, Live Positions: {@LivePositions}", storedPositions, livePositions);
+            }
+            return result;
+        }
 
         public async Task<LiveDeltasResult> GetLiveDeltasFromOrders()
         {
             UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult = await RecognizeLiveOrders();
+            return GetLiveDeltasFromUnvalidatedOrders(unvalidatedLiveOrdersResult);
+        }
+
+        public async Task<LiveDeltasResult> GetLiveDeltasFromOrders(string ordersFilename)
+        {
+            UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult = await RecognizeLiveOrders(ordersFilename);
+            return GetLiveDeltasFromUnvalidatedOrders(unvalidatedLiveOrdersResult);
+        }
+
+        // This does update the database so that the deltas remain accurate.
+        // May throw InvalidPortfolioStateException if the portfolio is not in a valid state
+        // (The portfolio may be offline, or its format may have changed.)
+        public async Task<IList<PositionDelta>> GetLiveDeltasFromPositions()
+        {
+            IList<Position> livePositions = await RecognizeLivePositions();
+            return Database.ComputeDeltasAndUpdateTables(livePositions);
+        }
+
+        private LiveDeltasResult GetLiveDeltasFromUnvalidatedOrders(UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult)
+        {
             Dictionary<FilledOrder, OptionQuote> validatedLiveOrders = ValidateLiveOrders(unvalidatedLiveOrdersResult.LiveOrders);
 
             TimeSortedSet<PositionDelta> liveDeltas = new TimeSortedSet<PositionDelta>();
@@ -89,9 +146,22 @@ namespace Core
                 Database.UpdateOrders(result.UpdatedFilledOrders);
                 liveDeltas = Database.ComputeDeltasAndUpdateTables(result.NewFilledOrders);
             }
-            Dictionary<string, OptionQuote> quotes = validatedLiveOrders.ToDictionary(obj => obj.Key.Symbol, obj => obj.Value);
+            Dictionary<string, OptionQuote> quotes = BuildQuoteDictionary(validatedLiveOrders);
 
             return new LiveDeltasResult(liveDeltas, quotes, unvalidatedLiveOrdersResult.SkippedOrderDueToLowConfidence);
+        }
+
+        private Dictionary<string, OptionQuote> BuildQuoteDictionary(Dictionary<FilledOrder, OptionQuote> orderToQuoteDictionary)
+        {
+            Dictionary<string, OptionQuote> dict = new Dictionary<string, OptionQuote>();
+            foreach((FilledOrder order, OptionQuote quote) in orderToQuoteDictionary)
+            {
+                if (!dict.ContainsKey(order.Symbol))
+                {
+                    dict.Add(order.Symbol, quote);
+                }
+            }
+            return dict;
         }
 
         private Dictionary<FilledOrder, OptionQuote> ValidateLiveOrders(IEnumerable<FilledOrder> liveOrders)
@@ -120,33 +190,6 @@ namespace Core
                 }
             }
             return validOrdersAndQuotes;
-        }
-
-        public async Task<LiveDeltasResult> GetLiveDeltasFromOrders(string ordersFilename)
-        {
-            UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult = await RecognizeLiveOrders(ordersFilename);
-            Dictionary<FilledOrder, OptionQuote> validatedLiveOrders = ValidateLiveOrders(unvalidatedLiveOrdersResult.LiveOrders);
-
-            TimeSortedSet<PositionDelta> liveDeltas = new TimeSortedSet<PositionDelta>();
-            if (validatedLiveOrders.Keys.Count > 0)
-            {
-                // TODO: Don't hardcode lookback
-                NewAndUpdatedFilledOrders result = Database.IdentifyNewAndUpdatedOrders(new TimeSortedSet<FilledOrder>(validatedLiveOrders.Keys), 10);
-                Database.UpdateOrders(result.UpdatedFilledOrders);
-                liveDeltas = Database.ComputeDeltasAndUpdateTables(result.NewFilledOrders);
-            }
-            Dictionary<string, OptionQuote> quotes = validatedLiveOrders.ToDictionary(obj => obj.Key.Symbol, obj => obj.Value);
-
-            return new LiveDeltasResult(liveDeltas, quotes, unvalidatedLiveOrdersResult.SkippedOrderDueToLowConfidence);
-        }
-
-        // This does update the database so that the deltas remain accurate.
-        // May throw InvalidPortfolioStateException if the portfolio is not in a valid state
-        // (The portfolio may be offline, or its format may have changed.)
-        public async Task<IList<PositionDelta>> GetLiveDeltasFromPositions()
-        {
-            IList<Position> livePositions = await RecognizeLivePositions();
-            return Database.ComputeDeltasAndUpdateTables(livePositions);
         }
 
         //// This does update the database so that the deltas remain accurate.

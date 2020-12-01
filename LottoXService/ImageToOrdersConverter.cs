@@ -96,8 +96,9 @@ namespace LottoXService
                     }
                     else
                     {
-                        Log.Warning("Unhandled Low confidence integer found- skipping order. OrderString {OrderString}, Integer {Integer}", currentOrderStr, parsedInt);
-                        lowConfidenceSkip = true;
+                        Log.Information("Unhandled Low confidence integer found. OrderString {OrderString}, Integer {Integer}, Confidence {Confidence}", currentOrderStr, parsedInt, word.Confidence);
+                        //Log.Warning("Unhandled Low confidence integer found- skipping order. OrderString {OrderString}, Integer {Integer}", currentOrderStr, parsedInt);
+                        //lowConfidenceSkip = true;
                     }
                 }
             }
@@ -137,7 +138,12 @@ namespace LottoXService
 
             foreach (Line line in lines)
             {
-                string? overrideLineText = OverrideLowConfidenceLine(line, orderStr, intConfidenceThreshold, symbolConfidenceThreshold, out bool lowConfidenceSkipThisLine);
+                string? overrideLineText = OverrideLowConfidenceLine(
+                    line, 
+                    _optionSymbolRegexUnnormalized.IsMatch(line.Text) ? line.Text : orderStr, 
+                    intConfidenceThreshold, 
+                    symbolConfidenceThreshold, 
+                    out bool lowConfidenceSkipThisLine);
                 lowConfidenceSkip = lowConfidenceSkip || lowConfidenceSkipThisLine;
                 wasLineOverriden = wasLineOverriden || overrideLineText != null;
                 string text = overrideLineText ?? line.Text;
