@@ -87,16 +87,17 @@ namespace LottoXService
 
         protected override void Reset()
         {
-            Symbol = "";
-            Quantity = -1;
-            FilledPrice = -1;
-            Instruction = "";
-            OrderType = "";
-            Limit = -1;
-            Time = new DateTime();
             _currentStr = "";
             _buildLevel = BuildLevel.SYMBOL;
             _thisLevelCounter = 0;
+
+            Symbol = "";
+            Quantity = 0;
+            FilledPrice = 0;
+            Instruction = "";
+            OrderType = "";
+            Limit = 0;
+            Time = new DateTime();
         }
 
         private void TakeFilledPrice(Word word)

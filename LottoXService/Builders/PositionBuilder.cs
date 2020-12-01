@@ -45,7 +45,7 @@ namespace LottoXService
                     TakePercentSign(word);
                     break;
                 case BuildLevel.MARKET_VALUE:
-                    TakeMarketValue(word);
+                    TakeMarketValueAndFixQuantityIfNecessary(word);
                     break;
                 case BuildLevel.DONE:
                     Log.Information("Builder is already done and ready to build a Position!");
@@ -63,12 +63,13 @@ namespace LottoXService
         
         protected override void Reset()
         {
-            Symbol = "";
-            Quantity = -1;
-            Last = -1;
-            Average = -1;
             _currentStr = "";
             _buildLevel = BuildLevel.SYMBOL;
+
+            Symbol = "";
+            Quantity = 0;
+            Last = 0;
+            Average = 0;
         }
 
         private delegate void SetPriceDelegate(double price);
@@ -97,7 +98,7 @@ namespace LottoXService
             }
         }
 
-        private void TakeMarketValue(Word word)
+        private void TakeMarketValueAndFixQuantityIfNecessary(Word word)
         {
             _currentStr += word.Text;
             if (_marketValRegex.IsMatch(_currentStr))
@@ -110,7 +111,14 @@ namespace LottoXService
                 double expectedValue = Quantity * Last * 100;
                 if (Math.Abs(value - expectedValue) / expectedValue > 0.05)
                 {
-                    throw new ModelBuilderException("Expected value differs from detected live market value", this);
+                    //ModelBuilderException ex = new ModelBuilderException("Expected value differs from detected live market value", this);
+                    //Log.Warning(ex, "Expected value differs from detected live market value. Symbol {Symbol}, Quantity {Quantity}, Last {Last}, MarketValue {MarketValue}",
+                    //    Symbol, Quantity, Last, value);
+                    //throw ex;
+                    int correctedQuantity = (int)Math.Round(value / (Last * 100));
+                    Log.Information("*** Expected value differs from detected live market value. Setting quantity to {NewQuantity}. Symbol {Symbol}, Quantity {Quantity}, Last {Last}, MarketValue {MarketValue}",
+                        correctedQuantity, Symbol, Quantity, Last, value);
+                    Quantity = correctedQuantity;
                 }
                 FinishBuildLevel();
             }
