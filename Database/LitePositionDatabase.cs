@@ -77,6 +77,11 @@ namespace Database
             _db.GetCollection<FilledOrder>().InsertBulk(orders);
         }
 
+        public override void InsertOrder(FilledOrder order)
+        {
+            _db.GetCollection<FilledOrder>().Insert(order);
+        }
+
         public override void UpdateAllPositions(IEnumerable<Position> positions)
         {
             _db.GetCollection<Position>().DeleteAll();

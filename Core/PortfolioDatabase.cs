@@ -18,6 +18,8 @@ namespace Core
 
         public abstract void InsertOrders(IEnumerable<FilledOrder> orders);
 
+        public abstract void InsertOrder(FilledOrder order);
+
         public abstract void DeleteOrders(IEnumerable<FilledOrder> orders);
 
         public abstract void InsertDelta(PositionDelta delta);
@@ -38,12 +40,11 @@ namespace Core
 
         public TimeSortedCollection<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedCollection<FilledOrder> newOrders)
         {
-            InsertOrders(newOrders);
-
             TimeSortedCollection<PositionDelta> deltas = new TimeSortedCollection<PositionDelta>();
             foreach (FilledOrder order in newOrders)
             {
                 Position? oldPos = GetPosition(order.Symbol);
+                PositionDelta delta;
                 if (oldPos == null) // NEW
                 {
                     if (order.Instruction == InstructionType.SELL_TO_CLOSE)
@@ -52,7 +53,7 @@ namespace Core
                         Log.Fatal(ex, "No existing position corresponding to sell order {@Order}- Symbol {Symbol}", order, order.Symbol);
                         throw ex;
                     }
-                    PositionDelta delta = new PositionDelta(
+                    delta = new PositionDelta(
                         DeltaType.NEW, 
                         order.Symbol, 
                         order.Quantity, 
@@ -66,7 +67,7 @@ namespace Core
                 }
                 else if (order.Instruction == InstructionType.BUY_TO_OPEN) // ADD
                 {
-                    PositionDelta delta = new PositionDelta(
+                    delta = new PositionDelta(
                         DeltaType.ADD,
                         order.Symbol,
                         order.Quantity,
@@ -84,7 +85,7 @@ namespace Core
                 }
                 else if (order.Instruction == InstructionType.SELL_TO_CLOSE) // SELL
                 {
-                    PositionDelta delta = new PositionDelta(
+                    delta = new PositionDelta(
                         DeltaType.SELL,
                         order.Symbol,
                         order.Quantity,
@@ -102,8 +103,15 @@ namespace Core
                         InsertPosition(position);
                     }
                 }
+                else
+                {
+                    PortfolioDatabaseException ex = new PortfolioDatabaseException("Unexpected instruction type: " + order.Instruction);
+                    Log.Fatal(ex, "Unexpected instruction type");
+                    throw ex;
+                }
+                InsertOrder(order);
+                InsertDelta(delta);
             }
-            InsertDeltas(deltas);
             return deltas;
         }
 
