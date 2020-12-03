@@ -1,4 +1,5 @@
 ﻿using AzureOCR;
+using Core;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
 using System;
@@ -17,13 +18,17 @@ namespace LottoXService
         protected Regex _priceRegex = new Regex(@"\d+[., ]\d+");
         protected Regex _spaceOrComma = new Regex("[ ,]");
 
-        public LtxModelBuilder() 
+        public LtxModelBuilder(MarketDataClient marketDataClient, PortfolioDatabase database) 
         {
             Symbol = "";
+            MarketDataClient = marketDataClient;
+            Database = database;
         }
 
         protected string Symbol { get; set; }
         protected int Quantity { get; set; }
+        protected MarketDataClient MarketDataClient { get; init; }
+        protected PortfolioDatabase Database { get; init; }
 
         protected void TakeSymbol(Word word)
         {

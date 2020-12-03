@@ -15,10 +15,13 @@ namespace LottoXService
 {
     public class LottoXClient : RagingBullClient
     {
-        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PortfolioDatabase positionDB, IMarketDataClient marketDataClient) : base(rbConfig, positionDB, marketDataClient)
+        public LottoXClient(RagingBullConfig rbConfig, OCRConfig ocrConfig, PortfolioDatabase database, MarketDataClient marketDataClient) : base(rbConfig, database, marketDataClient)
         {
-            ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig);
-            ImageToOrdersConverter = new ImageToOrdersConverter(ocrConfig);
+            PositionBuilder positionBuilder = new PositionBuilder(marketDataClient, database);
+            FilledOrderBuilder orderBuilder = new FilledOrderBuilder(marketDataClient, database);
+
+            ImageToPositionsConverter = new ImageToPositionsConverter(ocrConfig, positionBuilder);
+            ImageToOrdersConverter = new ImageToOrdersConverter(ocrConfig, orderBuilder);
             QuantityConsistencyClient = new ImageConsistencyClient();
             HeaderConsistencyClient = new ImageConsistencyClient();
             OrderConsistencyClient = new ImageConsistencyClient();
@@ -31,9 +34,9 @@ namespace LottoXService
         private ImageConsistencyClient OrderConsistencyClient { get; }
 
         // TODO: Remove eventually
-        public async Task<IList<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
+        public async Task<IEnumerable<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
         {
-            IList<Position> positions = await ImageToPositionsConverter.GetPositionsFromImage(filePath, writeToJsonPath);
+            IEnumerable<Position> positions = await ImageToPositionsConverter.BuildModelsFromImage(filePath, writeToJsonPath);
             return positions;
         }
 
@@ -75,34 +78,27 @@ namespace LottoXService
             return OrderConsistencyClient.UpdateImageAndCheckHasChanged(filepath, 0.99, groundTruthChanged);
         }
 
-        public override async Task<IList<Position>> RecognizeLivePositions()
+        public override async Task<IEnumerable<Position>> RecognizeLivePositions()
         {
             Log.Information("Getting live positions");
             string filepath = GetNextPortfolioFilepath();
             await TakePortfolioScreenshot(filepath);
-            IList<Position> positions = await ImageToPositionsConverter.GetPositionsFromImage(filepath);
+            IEnumerable<Position> positions = await ImageToPositionsConverter.BuildModelsFromImage(filepath);
             //IList <Position> positions = await ImageToPositionsConverter.GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json",
             //    "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/new.json"
             //    );
             return positions;
         }
 
-        protected override async Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders()
+        protected override async Task<TimeSortedCollection<FilledOrderAndQuote>> RecognizeLiveOrders(string? ordersFilename = null)
         {
-            IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
-            string filepath = GetNextOrdersFilepath();
-            await TakeOrdersScreenshot(filepath);
-            return await ImageToOrdersConverter.GetFilledOrdersFromImage(filepath, currentPositionSymbols);
-
-            //return await ImageToOrdersConverter.GetNewFilledOrdersFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-2219.png", 
-            //    todaysFilledOrders, 
-            //    currentPositionSymbols);
-        }
-
-        protected override async Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders(string ordersFilepath)
-        {
-            IList<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol).ToList();
-            return await ImageToOrdersConverter.GetFilledOrdersFromImage(ordersFilepath, currentPositionSymbols);
+            if (ordersFilename == null)
+            {
+                ordersFilename = GetNextOrdersFilepath();
+                await TakeOrdersScreenshot(ordersFilename);
+            }
+            IEnumerable<FilledOrderAndQuote> orders = await ImageToOrdersConverter.BuildModelsFromImage(ordersFilename);
+            return new TimeSortedCollection<FilledOrderAndQuote>(orders);
         }
 
         private async Task<bool> HasHeaderChanged()
@@ -112,7 +108,7 @@ namespace LottoXService
             return HeaderConsistencyClient.UpdateImageAndCheckHasChanged(filepath);
         }
 
-        private int getCurrentHeaderScreenshotNumber()
+        private int GetCurrentHeaderScreenshotNumber()
         {
             Regex reg = new Regex(@"header-(\d+).png");
             string[] files = Directory.GetFiles("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots", "*.png");
@@ -128,31 +124,31 @@ namespace LottoXService
 
         private string GetNextOrdersFilepath()
         {
-            int current = getCurrentHeaderScreenshotNumber();
+            int current = GetCurrentHeaderScreenshotNumber();
             return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-" + current + ".png";
         }
 
         private string GetNextTopOrderFilepath()
         {
-            int current = getCurrentHeaderScreenshotNumber();
+            int current = GetCurrentHeaderScreenshotNumber();
             return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/toporder-" + current + ".png";
         }
 
         private string GetNextHeaderFilepath()
         {
-            int next = getCurrentHeaderScreenshotNumber() + 1;
+            int next = GetCurrentHeaderScreenshotNumber() + 1;
             return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/header-" + next + ".png";
         }
 
         private string GetNextQuantityFilepath()
         {
-            int current = getCurrentHeaderScreenshotNumber();
+            int current = GetCurrentHeaderScreenshotNumber();
             return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantities-" + current + ".png";
         }
 
         private string GetNextPortfolioFilepath()
         {
-            int current = getCurrentHeaderScreenshotNumber();
+            int current = GetCurrentHeaderScreenshotNumber();
             return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-" + current + ".png";
         }
 

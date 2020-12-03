@@ -6,7 +6,7 @@ namespace Core.Model
 {
     public class PositionDelta : HasSymbolInStandardFormat, HasTime
     {
-        public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, DateTime? time = null)
+        public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, OptionQuote quote, DateTime? time = null)
         {
             if (percent > 1 && deltaType == Constants.DeltaType.SELL)
             {
@@ -20,6 +20,7 @@ namespace Core.Model
             Quantity = quantity;
             Price = price;
             Percent = percent;
+            Quote = quote;
             Time = time ?? DateTime.Now;
         }
 
@@ -32,6 +33,7 @@ namespace Core.Model
         // "ADD": Percent is amount that position was increased.
         // "SELL": Percent is amount of position that was sold.
         public float Percent { get; }
+        public OptionQuote Quote { get; set; }
         public DateTime Time { get; init; }
         public TimeSpan Age { get => DateTime.Now - Time; }
     }

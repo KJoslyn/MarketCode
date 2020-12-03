@@ -14,7 +14,7 @@ namespace Core
     {
         private OrderConfig _config;
 
-        public OrderManager(IBrokerClient brokerClient, IMarketDataClient marketDataClient, OrderConfig config)
+        public OrderManager(IBrokerClient brokerClient, MarketDataClient marketDataClient, OrderConfig config)
         {
             BrokerClient = brokerClient;
             MarketDataClient = marketDataClient;
@@ -22,23 +22,24 @@ namespace Core
         }
 
         private IBrokerClient BrokerClient { get; }
-        private IMarketDataClient MarketDataClient { get; }
+        private MarketDataClient MarketDataClient { get; }
 
-        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedCollection<PositionDelta> deltas, Dictionary<string, OptionQuote>? quotes = null)
+        public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedCollection<PositionDelta> deltas)
         {
-            IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta, quotes?.GetValueOrDefault(delta.Symbol)))
+            IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta))
                 .OfType<Order>(); // filter out nulls
             return RemoveBuysIfSellExistsForSameSymbol(orders);
         }
 
-        private Order? DecideOrder(PositionDelta delta, OptionQuote? quote)
+        private Order? DecideOrder(PositionDelta delta)
         {
+            OptionQuote quote = delta.Quote;
+
             // TODO: Remove after testing
             //Log.Warning("Not getting real quote");
             //OptionQuote quote = new OptionQuote(delta.Symbol, delta.Price * (float).99, delta.Price * (float)1.01, delta.Price, delta.Price * (float)1.06, (float)1.0);
             
-            if (quote == null ||
-                quote.Time < DateTime.Now.AddSeconds(-15))
+            if (quote.Time < DateTime.Now.AddSeconds(-15))
             {
                 Log.Information("Getting new quote. Old quote- {@Quote}", quote);
                 quote = MarketDataClient.GetOptionQuote(delta.Symbol);

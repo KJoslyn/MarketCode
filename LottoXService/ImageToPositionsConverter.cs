@@ -1,44 +1,20 @@
 ﻿using AzureOCR;
-using Core;
 using Core.Model;
-using Core.Model.Constants;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
-using PuppeteerSharp;
-using Serilog;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-#nullable enable
 
 namespace LottoXService
 {
-    internal class ImageToPositionsConverter : OCRClient
+    internal class ImageToPositionsConverter : OCRClient<Position>
     {
-        public ImageToPositionsConverter(OCRConfig config) : base(config) { }
+        public ImageToPositionsConverter(OCRConfig config, ModelBuilder<Position> builder) : base(config, builder) { }
 
-        public async Task<IList<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
+        protected override bool Validate(IEnumerable<Line> lines)
         {
-            IList<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
-
-            // We will use only the text part of the line
             List<string> lineTexts = lines.Select((line, index) => line.Text).ToList();
 
-            bool valid = ValidatePositionsColumnHeaders(lineTexts);
-            if (!valid)
-            {
-                Exception ex = new InvalidPortfolioStateException("Invalid portfolio state");
-                Log.Warning(ex, "Invalid portfolio state. Extracted text: {@Text}", lineTexts);
-                throw ex;
-            }
-
-            PositionBuilder builder = new PositionBuilder();
-            return builder.CreateModels(lines).ToList();
-        }
-
-        private bool ValidatePositionsColumnHeaders(List<string> lineTexts)
-        {
             int indexOfSymbol = lineTexts
                 .Select((text, index) => new { Text = text, Index = index })
                 .Where(obj => obj.Text == "Symbol")

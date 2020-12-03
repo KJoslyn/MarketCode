@@ -12,7 +12,7 @@ namespace RagingBull
 {
     public abstract class RagingBullClient : LivePortfolioClient
     {
-        public RagingBullClient(RagingBullConfig config, PortfolioDatabase positionDB, IMarketDataClient marketDataClient) : base(positionDB, marketDataClient)
+        public RagingBullClient(RagingBullConfig config, PortfolioDatabase positionDB, MarketDataClient marketDataClient) : base(positionDB, marketDataClient)
         {
             Email = config.Email;
             Password = config.Password;

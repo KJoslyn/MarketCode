@@ -6,9 +6,6 @@ namespace Core.Model
 {
     public class Position : HasSymbolInStandardFormat
     {
-        private static Regex _callRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}C\d+(.\d)?");
-        private static Regex _putRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}P\d+(.\d)?");
-
         public Position(string symbol, float longQuantity, float averagePrice) : this()
         {
             Symbol = symbol;
@@ -30,11 +27,11 @@ namespace Core.Model
         {
             get
             {
-                if (_callRegex.IsMatch(Symbol))
+                if (OptionSymbolUtils.IsCall(Symbol))
                 {
                     return AssetType.CALL;
                 }
-                else if (_putRegex.IsMatch(Symbol))
+                else if (OptionSymbolUtils.IsPut(Symbol))
                 {
                     return AssetType.PUT;
                 }

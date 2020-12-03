@@ -5,21 +5,44 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace AzureOCR
 {
-    public class OCRClient
+    public abstract class OCRClient<T>
     {
         private ComputerVisionClient _client;
+        private ModelBuilder<T> _builder;
 
-        public OCRClient(OCRConfig config)
+        public OCRClient(OCRConfig config, ModelBuilder<T> builder)
         {
+            _builder = builder;
             _client = new ComputerVisionClient(new ApiKeyServiceClientCredentials(config.SubscriptionKey))
             { Endpoint = config.Endpoint };
         }
 
-        public async Task<IList<Line>> ExtractLinesFromImage(string filePath, string writeToJsonPath = null)
+        public async Task<IEnumerable<T>> BuildModelsFromImage(
+            string filePath,
+            string writeToJsonPath = null)
+        {
+            IEnumerable<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
+
+            bool valid = Validate(lines);
+            if (!valid)
+            {
+                Exception ex = new InvalidImageException("Invalid portfolio state");
+                List<string> lineTexts = lines.Select((line, index) => line.Text).ToList();
+                Log.Warning(ex, "Invalid portfolio state. Extracted text: {@Text}", lineTexts);
+                throw ex;
+            }
+
+            return _builder.CreateModels(lines).ToList();
+        }
+
+        protected abstract bool Validate(IEnumerable<Line> lines);
+
+        private async Task<IList<Line>> ExtractLinesFromImage(string filePath, string writeToJsonPath = null)
         {
             IList<ReadResult> textResults;
 

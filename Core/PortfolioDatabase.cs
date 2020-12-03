@@ -59,6 +59,7 @@ namespace Core
                         order.Quantity, 
                         order.Price, 
                         0,
+                        order.Quote,
                         order.Time);
                     deltas.Add(delta);
 
@@ -73,6 +74,7 @@ namespace Core
                         order.Quantity,
                         order.Price,
                         order.Quantity / oldPos.LongQuantity,
+                        order.Quote,
                         order.Time);
                     deltas.Add(delta);
 
@@ -91,6 +93,7 @@ namespace Core
                         order.Quantity,
                         order.Price,
                         order.Quantity / oldPos.LongQuantity,
+                        order.Quote,
                         order.Time);
                     deltas.Add(delta);
 
@@ -115,7 +118,7 @@ namespace Core
             return deltas;
         }
 
-        public IList<PositionDelta> ComputeDeltasAndUpdateTables(IList<Position> livePositions)
+        public IEnumerable<PositionDelta> ComputeDeltasAndUpdateTables(IEnumerable<Position> livePositions)
         {
             IList<PositionDelta> deltas = new List<PositionDelta>();
             IEnumerable<Position> oldPositions = GetStoredPositions();

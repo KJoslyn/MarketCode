@@ -66,7 +66,7 @@ namespace LottoXService
         private IBrokerClient BrokerClient { get; }
         private LivePortfolioClient LivePortfolioClient { get; }
         private OrderManager OrderManager { get; }
-        private IMarketDataClient MarketDataClient { get; }
+        private MarketDataClient MarketDataClient { get; }
 
         class DeltaList
         {
@@ -86,12 +86,12 @@ namespace LottoXService
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            TimeSortedCollection<FilledOrder> liveOrders = new TimeSortedCollection<FilledOrder>();
-            liveOrders.Add(new FilledOrder("NIO_201204C55", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 25, 33)));
-            liveOrders.Add(new FilledOrder("NIO_201204C60", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 22, 30)));
-            liveOrders.Add(new FilledOrder("NIO_201204C62", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 22, 30)));
-            liveOrders.Add(new FilledOrder("NIO_201204C65", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 30, 00)));
-            LivePortfolioClient.IdentifyNewAndUpdatedOrders(liveOrders, 260);
+            //TimeSortedCollection<FilledOrder> liveOrders = new TimeSortedCollection<FilledOrder>();
+            //liveOrders.Add(new FilledOrder("NIO_201204C55", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 25, 33)));
+            //liveOrders.Add(new FilledOrder("NIO_201204C60", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 22, 30)));
+            //liveOrders.Add(new FilledOrder("NIO_201204C62", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 22, 30)));
+            //liveOrders.Add(new FilledOrder("NIO_201204C65", (float)0.5, "BUY_TO_OPEN", "LIMIT", (float)0.5, 50, new DateTime(2020, 12, 1, 12, 30, 00)));
+            //LivePortfolioClient.IdentifyNewAndUpdatedOrders(liveOrders, 260);
 
             //IEnumerable<Position> positions = BrokerClient.GetPositions();
             //OptionQuote quote;
@@ -126,15 +126,9 @@ namespace LottoXService
 
             int invalidCount = 0;
             int unexpectedErrorCount = 0;
-            int lowConfidenceCount = 0;
-
-            // TODO: Remove lastTopOrderDateTime
-            string lastTopOrderDateTime = "";
 
             //string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4173.png";
             string seedOrdersFilename = "";
-
-            bool lastParseSkippedDeltaDueToLowConfidence = false;
 
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -156,67 +150,29 @@ namespace LottoXService
 
                 try
                 {
-                    LiveDeltasResult result;
+                    TimeSortedCollection<PositionDelta> deltas;
 
                     if (seedOrdersFilename.Length > 0)
                     {
                         Log.Information("*********Seeding live orders with file " + seedOrdersFilename);
-                        result = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
+                        deltas = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
                         seedOrdersFilename = "";
-                    }
-                    else if (lastParseSkippedDeltaDueToLowConfidence)
-                    {
-                        Log.Information("***Last parse skipped delta due to low confidence. Trying again.");
-                        result = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                        if (result.LiveDeltas.Count > 0 )
-                        {
-                            await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
-                        }
                     }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
                         Log.Information("***Change in top orders detected- getting live orders");
-                        result = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                        if (result.LiveDeltas.Count > 0 )
+                        deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                        if (deltas.Count > 0 )
                         {
                             await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
                         }
                     }
                     else
                     {
-                        result = new LiveDeltasResult(new TimeSortedCollection<PositionDelta>(), new Dictionary<string, OptionQuote>(), false);
+                        deltas = new TimeSortedCollection<PositionDelta>();
                     }
 
-                    lastParseSkippedDeltaDueToLowConfidence = result.SkippedDeltaDueToLowConfidence;
-
-                    if (lastParseSkippedDeltaDueToLowConfidence)
-                    {
-                        lowConfidenceCount++;
-                        if (lowConfidenceCount > 2)
-                        {
-                            LowConfidenceParsingException ex = new LowConfidenceParsingException("Max number of low confidence parse attempts reached");
-                            throw ex;
-                        }
-                    }
-                    else
-                    {
-                        lowConfidenceCount = 0;
-                    }
-
-                    //deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
-
-
-                    //string topOrderDateTime;
-                    //(topOrderDateTime, deltas) = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                    //await LivePortfolioClient.HaveOrdersChanged(topOrderDateTime != lastTopOrderDateTime);
-                    //lastTopOrderDateTime = topOrderDateTime;
-
-                    //await LivePortfolioClient.HaveOrdersChanged(true);
-
-
-                    //(livePositions, deltas) = await LivePortfolioClient.GetLivePositionsAndDeltas(deltaList);
-
-                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(result.LiveDeltas, result.Quotes);
+                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(deltas);
 
                     foreach (Order order in orders)
                     {
@@ -226,7 +182,10 @@ namespace LottoXService
                     invalidCount = 0;
                     unexpectedErrorCount = 0;
                 }
-                catch (InvalidPortfolioStateException ex)
+                catch (Exception ex) when (
+                    ex is InvalidPortfolioStateException ||
+                    ex is InvalidImageException
+                )
                 {
                     invalidCount++;
 
@@ -245,11 +204,6 @@ namespace LottoXService
                 catch (PortfolioDatabaseException ex)
                 {
                     //Assume the exception is already logged
-                    break;
-                }
-                catch (LowConfidenceParsingException ex)
-                {
-                    Log.Fatal(ex, "Max number of low confidence parsing attempts reached");
                     break;
                 }
                 catch (OptionParsingException ex)

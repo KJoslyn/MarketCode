@@ -9,8 +9,12 @@ namespace Core
     {
         public const string StandardDateFormat = "yyMMdd";
         private static Regex _optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+(.\d)?)");
+        private static Regex _callRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}C\d+(.\d)?");
+        private static Regex _putRegex = new Regex(@"^[A-Z]{1,5}[_ ]?\d{6}P\d+(.\d)?");
 
         public static bool IsOptionSymbol(string symbol) => _optionSymbolRegex.IsMatch(symbol);
+        public static bool IsCall(string symbol) => _callRegex.IsMatch(symbol);
+        public static bool IsPut(string symbol) => _putRegex.IsMatch(symbol);
 
         public static string ConvertToStandardDateFormat(string symbol, string fromFormat)
         {

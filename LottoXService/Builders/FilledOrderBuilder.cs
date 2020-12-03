@@ -1,4 +1,5 @@
 ﻿using AzureOCR;
+using Core;
 using Core.Model;
 using Core.Model.Constants;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
@@ -19,11 +20,10 @@ namespace LottoXService
         private int _thisLevelCounter = 0;
         private Regex _dateTimeRegexUnnormalized = new Regex(@"(\d{2}/\d{2}/\d{2}) (\d{2}[: .,]\d{2}[: .,]\d{2}) (AM|PM)");
 
-        public FilledOrderBuilder(IEnumerable<string> currentPositionSymbols) : base()
+        public FilledOrderBuilder(MarketDataClient client, PortfolioDatabase database) : base(client, database)
         {
             Instruction = "";
             OrderType = "";
-            CurrentPositionSymbols = currentPositionSymbols;
         }
 
         public enum BuildLevel
@@ -37,7 +37,6 @@ namespace LottoXService
         private string OrderType { get; set; }
         private double Limit { get; set; }
         private DateTime Time { get; set; }
-        private IEnumerable<string> CurrentPositionSymbols { get; init; }
 
         public override void TakeNextWord(Word word)
         {
@@ -76,7 +75,21 @@ namespace LottoXService
             }
         }
 
-        protected override FilledOrder Build() => new FilledOrder(Symbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time);
+        protected override FilledOrder Build()
+        {
+            UnvalidatedFilledOrder unvalidatedOrder = new UnvalidatedFilledOrder(Symbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time);
+
+            bool isValid = MarketDataClient.ValidateOrderAndGetQuote(unvalidatedOrder, out OptionQuote quote);
+
+            if (isValid)
+            {
+                return new FilledOrder(unvalidatedOrder, quote);
+            }
+            else
+            {
+                // TODO: Finish
+            }
+        }
 
         protected override void FinishBuildLevel()
         {
@@ -215,10 +228,14 @@ namespace LottoXService
             {
                 FinishBuildLevel();
             }
-            else if (word.Text == "WMM" && CurrentPositionSymbols.Contains(Symbol))
+            else if (word.Text == "WMM")
             {
-                Log.Warning("WMM order encountered for existing LottoX position. Treating as LTX order. Symbol {Symbol}, Builder {@Builder}", Symbol, this);
-                FinishBuildLevel();
+                IEnumerable<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol);
+                if (currentPositionSymbols.Contains(Symbol))
+                {
+                    Log.Warning("WMM order encountered for existing LottoX position. Treating as LTX order. Symbol {Symbol}, Builder {@Builder}", Symbol, this);
+                    FinishBuildLevel();
+                }
             }
             else
             {

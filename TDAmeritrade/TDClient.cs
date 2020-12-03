@@ -16,7 +16,7 @@ using TDAmeritrade.Model;
 
 namespace TDAmeritrade
 {
-    public class TDClient : IBrokerClient, IMarketDataClient
+    public class TDClient : MarketDataClient, IBrokerClient
     {
         public TDClient(TDAmeritradeConfig config)
         {
@@ -62,7 +62,7 @@ namespace TDAmeritrade
             return account.SecuritiesAccount.Positions.Cast<Position>().ToList();
         }
 
-        public OptionQuote GetOptionQuote(string symbol)
+        public override OptionQuote GetOptionQuote(string symbol)
         {
             if (!OptionSymbolUtils.IsOptionSymbol(symbol))
             {
@@ -83,7 +83,7 @@ namespace TDAmeritrade
             return quote;
         }
 
-        public bool IsMarketOpenToday()
+        public override bool IsMarketOpenToday()
         {
             RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/OPTION/hours");
             RestRequest request = CreateRequest(Method.GET);

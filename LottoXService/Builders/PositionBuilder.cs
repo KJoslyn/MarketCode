@@ -1,4 +1,5 @@
 ﻿using AzureOCR;
+using Core;
 using Core.Model;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
@@ -13,6 +14,8 @@ namespace LottoXService
 
         // Market value for options always ends in .00 (0 cents.)
         private Regex _marketValRegex = new Regex(@"[$S]\d+[., ]\d+[., ]00");
+
+        public PositionBuilder(MarketDataClient client, PortfolioDatabase database) : base(client, database) { }
 
         public enum BuildLevel
         {

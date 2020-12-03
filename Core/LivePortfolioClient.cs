@@ -10,7 +10,7 @@ namespace Core
 {
     public abstract class LivePortfolioClient
     {
-        public LivePortfolioClient(PortfolioDatabase database, IMarketDataClient marketDataClient)
+        public LivePortfolioClient(PortfolioDatabase database, MarketDataClient marketDataClient)
         {
             Database = database;
             MarketDataClient = marketDataClient;
@@ -32,7 +32,7 @@ namespace Core
 
         protected PortfolioDatabase Database { get; init; }
 
-        protected IMarketDataClient MarketDataClient { get; init; }
+        protected MarketDataClient MarketDataClient { get; init; }
 
         public abstract Task<bool> Login();
 
@@ -43,25 +43,15 @@ namespace Core
         public abstract Task<bool> HaveOrdersChanged(bool? groundTruthChanged);
 
         // This does not update the database.
-        public abstract Task<IList<Position>> RecognizeLivePositions();
+        public abstract Task<IEnumerable<Position>> RecognizeLivePositions();
 
-        protected abstract Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders();
-
-        protected abstract Task<UnvalidatedLiveOrdersResult> RecognizeLiveOrders(string ordersFilename);
-
-        public IEnumerable<Position> GetStoredPositions() => Database.GetStoredPositions();
-
-        // TODO: Remove
-        public NewAndUpdatedFilledOrders IdentifyNewAndUpdatedOrders(TimeSortedCollection<FilledOrder> liveOrders, double lookbackMinutes)
-        {
-            return Database.IdentifyNewAndUpdatedOrders(liveOrders, lookbackMinutes);
-        }
+        protected abstract Task<TimeSortedCollection<FilledOrder>> RecognizeLiveOrders(string? ordersFilename = null);
 
         public async Task<bool> CheckLivePositionsAgainstDatabasePositions()
         {
 
             IEnumerable<Position> livePositions = await RecognizeLivePositions();
-            IEnumerable<Position> storedPositions = GetStoredPositions();
+            IEnumerable<Position> storedPositions = Database.GetStoredPositions();
             bool result = true;
 
             if (livePositions.Count() != storedPositions.Count())
@@ -85,84 +75,26 @@ namespace Core
             return result;
         }
 
-        public async Task<IList<PositionDelta>> GetLiveDeltasFromPositions()
+        public async Task<IEnumerable<PositionDelta>> GetLiveDeltasFromPositions()
         {
-            IList<Position> livePositions = await RecognizeLivePositions();
+            IEnumerable<Position> livePositions = await RecognizeLivePositions();
             return Database.ComputeDeltasAndUpdateTables(livePositions);
         }
 
-        public async Task<LiveDeltasResult> GetLiveDeltasFromOrders()
+        public async Task<TimeSortedCollection<PositionDelta>> GetLiveDeltasFromOrders(string? ordersFilename = null)
         {
-            UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult = await RecognizeLiveOrders();
-            return GetLiveDeltasFromUnvalidatedOrders(unvalidatedLiveOrdersResult);
-        }
+            TimeSortedCollection<FilledOrder> liveOrders = await RecognizeLiveOrders(ordersFilename);
 
-        public async Task<LiveDeltasResult> GetLiveDeltasFromOrders(string ordersFilename)
-        {
-            UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult = await RecognizeLiveOrders(ordersFilename);
-            return GetLiveDeltasFromUnvalidatedOrders(unvalidatedLiveOrdersResult);
-        }
-
-        private LiveDeltasResult GetLiveDeltasFromUnvalidatedOrders(UnvalidatedLiveOrdersResult unvalidatedLiveOrdersResult)
-        {
-            TimeSortedCollection<PositionDelta> liveDeltas = new TimeSortedCollection<PositionDelta>();
-            Dictionary<string, OptionQuote> quotes = new Dictionary<string, OptionQuote>();
-
-            if (unvalidatedLiveOrdersResult.LiveOrders.Count > 0)
+            if (liveOrders.Count == 0)
             {
-                // TODO: Don't hardcode lookback
-                NewAndUpdatedFilledOrders result = Database.IdentifyNewAndUpdatedOrders(new TimeSortedCollection<FilledOrder>(unvalidatedLiveOrdersResult.LiveOrders), 10);
-                Database.UpdateOrders(result.UpdatedFilledOrders);
-
-                TimeSortedCollection<FilledOrder> validNewOrders;
-                (validNewOrders, quotes) = ValidateNewOrdersAndGetQuotes(result.NewFilledOrders);
-                liveDeltas = Database.ComputeDeltasAndUpdateTables(validNewOrders);
+                return new TimeSortedCollection<PositionDelta>();
             }
 
-            return new LiveDeltasResult(liveDeltas, quotes, unvalidatedLiveOrdersResult.SkippedOrderDueToLowConfidence);
-        }
+            // TODO: Don't hardcode lookback
+            NewAndUpdatedFilledOrders result = Database.IdentifyNewAndUpdatedOrders(liveOrders, 10);
+            Database.UpdateOrders(result.UpdatedFilledOrders);
 
-        private (TimeSortedCollection<FilledOrder>, Dictionary<string, OptionQuote>) ValidateNewOrdersAndGetQuotes(IEnumerable<FilledOrder> unvalidatedNewOrders)
-        {
-            TimeSortedCollection<FilledOrder> validNewFilledOrders = new TimeSortedCollection<FilledOrder>();
-            Dictionary<string, OptionQuote> newOrderQuotes = new Dictionary<string, OptionQuote>();
-
-            foreach (FilledOrder order in unvalidatedNewOrders)
-            {
-                bool valid = ValidateOrderAndGetQuote(order, out OptionQuote? quote);
-                if (valid && quote != null)
-                {
-                    validNewFilledOrders.Add(order);
-                    if (!newOrderQuotes.ContainsKey(order.Symbol))
-                    {
-                        newOrderQuotes.Add(order.Symbol, quote);
-                    }
-                }
-            }
-
-            return (validNewFilledOrders, newOrderQuotes);
-        }
-
-        private bool ValidateOrderAndGetQuote(FilledOrder order, out OptionQuote? quote)
-        {
-            quote = null;
-            try
-            {
-                quote = MarketDataClient.GetOptionQuote(order.Symbol);
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Error getting quote for symbol {Symbol}", order.Symbol);
-                return false;
-            }
-
-            if (order.Price < quote.LowPrice ||
-                order.Price > quote.HighPrice)
-            {
-                Log.Warning("Order price not within day's range- symbol {Symbol}, order {@Order}, quote {@Quote}", order.Symbol, order, quote);
-                return false;
-            }
-            return true;
+            return Database.ComputeDeltasAndUpdateTables(result.NewFilledOrders);
         }
     }
 }
