@@ -78,16 +78,23 @@ namespace LottoXService
         protected override FilledOrder Build()
         {
             UnvalidatedFilledOrder unvalidatedOrder = new UnvalidatedFilledOrder(Symbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time);
+            FilledOrder? existingOrder = Database.GetTodaysFilledOrders().FirstOrDefault(order => unvalidatedOrder.StrictEquals(order));
 
-            bool isValid = MarketDataClient.ValidateOrderAndGetQuote(unvalidatedOrder, out OptionQuote quote);
-
-            if (isValid)
+            if (existingOrder != null)
             {
-                return new FilledOrder(unvalidatedOrder, quote);
+                return existingOrder;
             }
             else
             {
-                // TODO: Finish
+                bool isValid = MarketDataClient.ValidateOrderAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
+                if (isValid)
+                {
+                    return new FilledOrder(unvalidatedOrder, quote);
+                }
+                else
+                {
+                    // TODO: Finish
+                }
             }
         }
 

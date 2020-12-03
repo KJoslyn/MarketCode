@@ -7,9 +7,9 @@ using System.Text.RegularExpressions;
 
 namespace LottoXService
 {
-    internal class ImageToOrdersConverter : OCRClient<FilledOrderAndQuote>
+    internal class ImageToOrdersConverter : ImageToModelsClient<FilledOrder>
     {
-        public ImageToOrdersConverter(OCRConfig config, ModelBuilder<FilledOrderAndQuote> builder) : base(config, builder) { }
+        public ImageToOrdersConverter(OCRConfig config, ModelBuilder<FilledOrder> builder) : base(config, builder) { }
 
         protected override bool Validate(IEnumerable<Line> lines)
         {

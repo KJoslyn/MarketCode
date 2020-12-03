@@ -16,6 +16,16 @@ namespace Core
         public static bool IsCall(string symbol) => _callRegex.IsMatch(symbol);
         public static bool IsPut(string symbol) => _putRegex.IsMatch(symbol);
 
+        public static string GetEquitySymbol(string symbol)
+        {
+            GroupCollection matchGroups = _optionSymbolRegex.Match(symbol).Groups;
+            if (matchGroups.Count < 2)
+            {
+                throw new OptionParsingException("Invalid option symbol", symbol);
+            }
+            return matchGroups[1].Value;
+        }
+
         public static string ConvertToStandardDateFormat(string symbol, string fromFormat)
         {
             return ConvertDateFormat(symbol, fromFormat, StandardDateFormat);

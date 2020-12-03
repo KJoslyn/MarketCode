@@ -46,13 +46,13 @@ namespace LottoXService
 
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
-            PortfolioDatabase lottoxDatabase = new LitePositionDatabase(_generalConfig.LottoxDatabasePath);
+            PortfolioDatabase lottoxDatabase = new LitePortfolioDatabase(_generalConfig.LottoxDatabasePath, _generalConfig.SymbolsDatabasePath);
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase, MarketDataClient);
 
             if (_generalConfig.UsePaperTrade)
             {
                 Log.Information("PAPER TRADING");
-                PortfolioDatabase paperDatabase = new LitePositionDatabase(_generalConfig.PaperTradeDatabasePath);
+                PortfolioDatabase paperDatabase = new LitePortfolioDatabase(_generalConfig.PaperTradeDatabasePath, _generalConfig.PaperSymbolsDatabasePath);
                 BrokerClient = new PaperTradeBrokerClient(paperDatabase, MarketDataClient);
             }
             else
@@ -67,11 +67,6 @@ namespace LottoXService
         private LivePortfolioClient LivePortfolioClient { get; }
         private OrderManager OrderManager { get; }
         private MarketDataClient MarketDataClient { get; }
-
-        class DeltaList
-        {
-            public IList<PositionDelta> Deltas { get; set; }
-        }
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
@@ -110,8 +105,8 @@ namespace LottoXService
 
             //IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4380.png");
 
-            Log.Information("RETURNING EARLY");
-            return;
+            //Log.Information("RETURNING EARLY");
+            //return;
 
             if (!MarketDataClient.IsMarketOpenToday())
             {
@@ -201,7 +196,7 @@ namespace LottoXService
 
                     continue;
                 }
-                catch (PortfolioDatabaseException ex)
+                catch (PortfolioDatabaseException)
                 {
                     //Assume the exception is already logged
                     break;

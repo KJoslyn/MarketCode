@@ -1,12 +1,13 @@
 ﻿using Core.Model.Constants;
 using Serilog;
 using System;
+#nullable enable
 
 namespace Core.Model
 {
     public class PositionDelta : HasSymbolInStandardFormat, HasTime
     {
-        public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, OptionQuote quote, DateTime? time = null)
+        public PositionDelta(string deltaType, string symbol, float quantity, float price, float percent, OptionQuote? quote = null, DateTime? time = null)
         {
             if (percent > 1 && deltaType == Constants.DeltaType.SELL)
             {
@@ -33,7 +34,7 @@ namespace Core.Model
         // "ADD": Percent is amount that position was increased.
         // "SELL": Percent is amount of position that was sold.
         public float Percent { get; }
-        public OptionQuote Quote { get; set; }
+        public OptionQuote? Quote { get; set; }
         public DateTime Time { get; init; }
         public TimeSpan Age { get => DateTime.Now - Time; }
     }

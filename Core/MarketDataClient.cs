@@ -15,7 +15,7 @@ namespace Core
 
         public abstract bool IsMarketOpenToday();
 
-        public bool ValidateOrderAndGetQuote(UnvalidatedFilledOrder order, out OptionQuote quote)
+        public bool ValidateOrderAndGetQuote(UnvalidatedFilledOrder order, out OptionQuote? quote)
         {
             quote = null;
             try

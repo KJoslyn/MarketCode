@@ -9,13 +9,15 @@ using System.Linq;
 
 namespace Database
 {
-    public class LitePositionDatabase : PortfolioDatabase
+    public class LitePortfolioDatabase : PortfolioDatabase
     {
         protected LiteDatabase _db;
+        protected LiteDatabase _symbolsDb;
 
-        public LitePositionDatabase(string dbPath)
+        public LitePortfolioDatabase(string dbPath, string symbolsDbPath)
         {
             _db = new LiteDatabase(dbPath);
+            _symbolsDb = new LiteDatabase(symbolsDbPath);
 
             //TODO REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!
             //_db.GetCollection<Position>().DeleteMany(pos => pos.DateUpdated.Date == DateTime.Now.Date);
@@ -29,11 +31,6 @@ namespace Database
         public override TimeSortedCollection<PositionDelta> GetStoredDeltas()
         {
             return new TimeSortedCollection<PositionDelta>(_db.GetCollection<PositionDelta>().FindAll());
-        }
-
-        public override void InsertDelta(PositionDelta delta)
-        {
-            _db.GetCollection<PositionDelta>().Insert(delta);
         }
 
         public override void InsertPosition(Position position)
@@ -59,7 +56,7 @@ namespace Database
             return new TimeSortedCollection<FilledOrder>(orders);
         }
 
-        protected override bool OrderAlreadyExists(FilledOrder order)
+        public override bool OrderAlreadyExists(FilledOrder order)
         {
             // FindOne() using o.StrictEquals() throws a LiteDB exception dealing with
             // inability to convert to BSON expression.
@@ -67,7 +64,7 @@ namespace Database
             return existingOrder != null;
         }
 
-        protected override Position? GetPosition(string symbol)
+        public override Position? GetPosition(string symbol)
         {
             return _db.GetCollection<Position>().FindOne(pos => pos.Symbol == symbol);
         }
@@ -88,11 +85,6 @@ namespace Database
             _db.GetCollection<Position>().InsertBulk(positions);
         }
 
-        public override void InsertDeltas(IEnumerable<PositionDelta> deltas)
-        {
-            _db.GetCollection<PositionDelta>().InsertBulk(deltas);
-        }
-
         public override TimeSortedCollection<FilledOrder> GetTodaysFilledOrders()
         {
             return new TimeSortedCollection<FilledOrder>(_db.GetCollection<FilledOrder>().Find(order => order.Time.Date == DateTime.Today));
@@ -106,5 +98,24 @@ namespace Database
                 //_db.GetCollection<FilledOrder>().DeleteMany(o => o.StrictEquals(order));
             }
         }
+
+        protected override void UpsertUsedUnderlyingSymbol(UsedUnderlyingSymbol usedSymbol)
+        {
+            _symbolsDb.GetCollection<UsedUnderlyingSymbol>().Upsert(usedSymbol);
+        }
+
+        protected override void InsertDelta(PositionDelta delta)
+        {
+            _db.GetCollection<PositionDelta>().Insert(delta);
+        }
+
+        public override IEnumerable<UsedUnderlyingSymbol> GetUsedUnderlyingSymbols(Func<UsedUnderlyingSymbol, bool> predicate)
+        {
+            return _symbolsDb.GetCollection<UsedUnderlyingSymbol>().FindAll().Where(predicate);
+        }
+
+        //public IEnumerable<UsedSymbol> GetSimilarUsedSymbols(string searchSymbol, int maxHammingDistance)
+        //{
+        //}
     }
 }

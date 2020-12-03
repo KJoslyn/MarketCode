@@ -97,7 +97,7 @@ namespace Core
             }
 
             PositionDelta delta = new PositionDelta(deltaType, order.Symbol, order.Quantity, price, percent);
-            PositionDB.InsertDelta(delta);
+            PositionDB.InsertDeltaAndUpsertUsedEquitySymbol(delta);
 
             float oldQuantity = currentPos?.LongQuantity ?? 0;
             float oldAveragePrice = currentPos?.AveragePrice ?? 0;
@@ -133,7 +133,7 @@ namespace Core
 
             PositionDelta delta = new PositionDelta(DeltaType.SELL, order.Symbol, order.Quantity, price, percent);
 
-            PositionDB.InsertDelta(delta);
+            PositionDB.InsertDeltaAndUpsertUsedEquitySymbol(delta);
             PositionDB.DeletePosition(currentPos);
 
             float newQuantity = currentPos.LongQuantity - delta.Quantity;
@@ -172,11 +172,13 @@ namespace Core
 
     internal class Instrument
     {
+        #pragma warning disable CS8618
         public Instrument(string symbol, string assetType)
         {
             Symbol = symbol;
             AssetType = assetType;
         }
+        #pragma warning restore CS8618
 
         public string AssetType { get; init; }
         public string Cusip { get; init; }

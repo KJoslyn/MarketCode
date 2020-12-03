@@ -10,12 +10,12 @@ using System.Threading.Tasks;
 
 namespace AzureOCR
 {
-    public abstract class OCRClient<T>
+    public abstract class ImageToModelsClient<T>
     {
         private ComputerVisionClient _client;
         private ModelBuilder<T> _builder;
 
-        public OCRClient(OCRConfig config, ModelBuilder<T> builder)
+        public ImageToModelsClient(OCRConfig config, ModelBuilder<T> builder)
         {
             _builder = builder;
             _client = new ComputerVisionClient(new ApiKeyServiceClientCredentials(config.SubscriptionKey))

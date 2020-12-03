@@ -34,7 +34,7 @@ namespace LottoXService
         private ImageConsistencyClient OrderConsistencyClient { get; }
 
         // TODO: Remove eventually
-        public async Task<IEnumerable<Position>> GetPositionsFromImage(string filePath, string writeToJsonPath = null)
+        public async Task<IEnumerable<Position>> GetPositionsFromImage(string filePath, string? writeToJsonPath = null)
         {
             IEnumerable<Position> positions = await ImageToPositionsConverter.BuildModelsFromImage(filePath, writeToJsonPath);
             return positions;
@@ -90,15 +90,15 @@ namespace LottoXService
             return positions;
         }
 
-        protected override async Task<TimeSortedCollection<FilledOrderAndQuote>> RecognizeLiveOrders(string? ordersFilename = null)
+        protected override async Task<TimeSortedCollection<FilledOrder>> RecognizeLiveOrders(string? ordersFilename = null)
         {
             if (ordersFilename == null)
             {
                 ordersFilename = GetNextOrdersFilepath();
                 await TakeOrdersScreenshot(ordersFilename);
             }
-            IEnumerable<FilledOrderAndQuote> orders = await ImageToOrdersConverter.BuildModelsFromImage(ordersFilename);
-            return new TimeSortedCollection<FilledOrderAndQuote>(orders);
+            IEnumerable<FilledOrder> orders = await ImageToOrdersConverter.BuildModelsFromImage(ordersFilename);
+            return new TimeSortedCollection<FilledOrder>(orders);
         }
 
         private async Task<bool> HasHeaderChanged()

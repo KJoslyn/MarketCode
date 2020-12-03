@@ -43,7 +43,9 @@ namespace RagingBull
                     throw new RagingBullException("Could not find logout button");
                 }
                 await logout.ClickAsync();
+                #pragma warning disable CS8602 // Dereference of a possibly null reference.
                 await Browser.CloseAsync();
+                #pragma warning restore CS8602
             }
             catch (Exception ex)
             {
@@ -127,7 +129,9 @@ namespace RagingBull
 
         protected async Task<Page> GetPage()
         {
+            #pragma warning disable CS8602 // Dereference of a possibly null reference.
             Page[] pages = await Browser.PagesAsync();
+            #pragma warning restore CS8602
             return pages[0];
         }
 

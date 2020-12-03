@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace LottoXService
 {
-    internal class ImageToPositionsConverter : OCRClient<Position>
+    internal class ImageToPositionsConverter : ImageToModelsClient<Position>
     {
         public ImageToPositionsConverter(OCRConfig config, ModelBuilder<Position> builder) : base(config, builder) { }
 

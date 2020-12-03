@@ -22,10 +22,6 @@ namespace Core
 
         public abstract void DeleteOrders(IEnumerable<FilledOrder> orders);
 
-        public abstract void InsertDelta(PositionDelta delta);
-
-        public abstract void InsertDeltas(IEnumerable<PositionDelta> deltas);
-
         public abstract void InsertPosition(Position position);
 
         public abstract void UpdateAllPositions(IEnumerable<Position> positions);
@@ -34,9 +30,19 @@ namespace Core
 
         public abstract TimeSortedCollection<FilledOrder> GetTodaysFilledOrders();
 
-        protected abstract bool OrderAlreadyExists(FilledOrder order);
+        public abstract bool OrderAlreadyExists(FilledOrder order);
 
-        protected abstract Position? GetPosition(string symbol);
+        public abstract Position? GetPosition(string symbol);
+
+        public abstract IEnumerable<UsedUnderlyingSymbol> GetUsedUnderlyingSymbols(Func<UsedUnderlyingSymbol, bool> predicate);
+
+        public IEnumerable<UsedUnderlyingSymbol> GetAllUsedUnderlyingSymbols() => GetUsedUnderlyingSymbols(obj => true);
+
+        public void InsertDeltaAndUpsertUsedUnderlyingSymbol(PositionDelta delta)
+        {
+            InsertDelta(delta);
+            UpsertUsedUnderlyingSymbol(new UsedUnderlyingSymbol(delta.Symbol, delta.Time));
+        }
 
         public TimeSortedCollection<PositionDelta> ComputeDeltasAndUpdateTables(TimeSortedCollection<FilledOrder> newOrders)
         {
@@ -113,7 +119,7 @@ namespace Core
                     throw ex;
                 }
                 InsertOrder(order);
-                InsertDelta(delta);
+                InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
             }
             return deltas;
         }
@@ -175,9 +181,9 @@ namespace Core
                 if (delta != null)
                 {
                     deltas.Add(delta);
+                    InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
                 }
             }
-            InsertDeltas(deltas);
             UpdateAllPositions(livePositions);
 
             return deltas;
@@ -206,6 +212,10 @@ namespace Core
 
             return new NewAndUpdatedFilledOrders(allNewOrders, recentOrdersResult.UpdatedFilledOrders);
         }
+
+        protected abstract void UpsertUsedUnderlyingSymbol(UsedUnderlyingSymbol usedSymbol);
+
+        protected abstract void InsertDelta(PositionDelta delta);
 
         private NewAndUpdatedFilledOrders IdentifyRecentNewAndUpdatedOrders(TimeSortedCollection<FilledOrder> liveOrders, DateTime lookAfterTime)
         {

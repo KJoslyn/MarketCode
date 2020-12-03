@@ -33,7 +33,7 @@ namespace Core
 
         private Order? DecideOrder(PositionDelta delta)
         {
-            OptionQuote quote = delta.Quote;
+            OptionQuote quote = delta.Quote ?? MarketDataClient.GetOptionQuote(delta.Symbol);
 
             // TODO: Remove after testing
             //Log.Warning("Not getting real quote");
