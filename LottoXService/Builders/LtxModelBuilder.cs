@@ -1,5 +1,6 @@
 ﻿using AzureOCR;
 using Core;
+using Core.Model;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
 using System;
@@ -11,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace LottoXService
 {
-    public abstract class LtxModelBuilder<T> : ModelBuilder<T>
+    public abstract class LtxModelBuilder<T> : ModelBuilder<T> where T : HasSymbolInStandardFormat
     {
         protected string _currentStr = "";
         protected Regex _optionSymbolRegexUnnormalized = new Regex(@"[A-Z]{1,5} \d{6}[CP]\d+([., ]\d)?$");
@@ -29,6 +30,52 @@ namespace LottoXService
         protected int Quantity { get; set; }
         protected MarketDataClient MarketDataClient { get; init; }
         protected PortfolioDatabase Database { get; init; }
+
+        protected abstract T InstantiateWithSymbolOverride(string symbol, OptionQuote quote);
+        protected abstract bool ValidateWithSymbolOverride(string symbol, out OptionQuote quote);
+
+        protected T BuildModelFromSimilarUsedSymbol()
+        {
+            string searchSymbol = OptionSymbolUtils.GetUnderlyingSymbol(Symbol);
+            TimeSortedCollection<UsedUnderlyingSymbol> candidates = new TimeSortedCollection<UsedUnderlyingSymbol>(
+                Database.GetUsedUnderlyingSymbols(usedSymbol => 
+                    searchSymbol.Length == usedSymbol.Symbol.Length
+                    && StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1));
+
+            T model = default(T);
+            List<UsedUnderlyingSymbol> validCloseSymbols = new List<UsedUnderlyingSymbol>();
+            // Look at most recent used symbols first
+            foreach (UsedUnderlyingSymbol usedSymbol in candidates.Reverse())
+            {
+                string newOptionSymbol = OptionSymbolUtils.ChangeUnderlyingSymbol(usedSymbol.Symbol, Symbol);
+
+                bool isNewSymbolValid = ValidateWithSymbolOverride(newOptionSymbol, out OptionQuote quote);
+                if (isNewSymbolValid)
+                {
+                    // If this happens more than once, we will error and log all validCloseSymbols
+                    model = InstantiateWithSymbolOverride(newOptionSymbol, quote);
+                    validCloseSymbols.Add(usedSymbol);
+                }
+            }
+
+            if (model != default(T) && validCloseSymbols.Count == 1)
+            {
+                Log.Information("Found closely related symbol {Symbol} to replace invalid symbol {OldSymbol}", model.Symbol, Symbol);
+                return model;
+            }
+            else if (validCloseSymbols.Count == 0)
+            {
+                ModelBuilderException ex = new ModelBuilderException("No closely related symbol found in database", this);
+                Log.Error(ex, "No closely related symbol found in database");
+                throw ex;
+            }
+            else // (validCloseSymbols.Count > 1)
+            {
+                ModelBuilderException ex = new ModelBuilderException("Multiple valid and closely related symbols exist", this);
+                Log.Error(ex, "Multiple valid and closely related symbols exist: {@ValidCloseSymbols}", validCloseSymbols);
+                throw ex;
+            }
+        }
 
         protected void TakeSymbol(Word word)
         {

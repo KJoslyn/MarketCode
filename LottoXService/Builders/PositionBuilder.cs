@@ -5,6 +5,7 @@ using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
 using Serilog;
 using System;
 using System.Text.RegularExpressions;
+#nullable enable
 
 namespace LottoXService
 {
@@ -56,7 +57,37 @@ namespace LottoXService
             }
         }
 
-        protected override Position Build() => new Position(Symbol, Quantity, (float)Average);
+        protected override Position Build()
+        {
+            Position? existingPosition = Database.GetPosition(Symbol);
+            if (existingPosition?.LongQuantity == Quantity)
+            {
+                return existingPosition;
+            }
+            else
+            {
+                bool isValid = MarketDataClient.ValidateWithinTodaysRangeAndGetQuote(Symbol, (float)Last, out _);
+                if (isValid)
+                {
+                    return new Position(Symbol, Quantity, (float)Average);
+                }
+                else
+                {
+                    Log.Information("Found invalid symbol/price in parsed position: Symbol {Symbol}. Builder {@Builder}", Symbol, this);
+                    return BuildModelFromSimilarUsedSymbol();
+                }
+            }
+        }
+
+        protected override Position InstantiateWithSymbolOverride(string overrideSymbol, OptionQuote quote)
+        {
+            return new Position(overrideSymbol, Quantity, (float)Average);
+        }
+
+        protected override bool ValidateWithSymbolOverride(string overrideSymbol, out OptionQuote? quote)
+        {
+            return MarketDataClient.ValidateWithinTodaysRangeAndGetQuote(overrideSymbol, (float)Last, out quote);
+        }
 
         protected override void FinishBuildLevel()
         {

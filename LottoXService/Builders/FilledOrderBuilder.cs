@@ -93,54 +93,20 @@ namespace LottoXService
                 }
                 else
                 {
-                    Log.Information("Found invalid symbol/price in parsed order: Symbol {Symbol}. Builder {@Builder}", this);
-                    return CreateFilledOrderFromCloseUsedSymbol();
+                    Log.Information("Found invalid symbol/price in parsed order: Symbol {Symbol}. Builder {@Builder}", Symbol, this);
+                    return BuildModelFromSimilarUsedSymbol();
                 }
             }
         }
 
-        private FilledOrder CreateFilledOrderFromCloseUsedSymbol()
+        protected override FilledOrder InstantiateWithSymbolOverride(string overrideSymbol, OptionQuote quote)
         {
-            string searchSymbol = OptionSymbolUtils.GetUnderlyingSymbol(Symbol);
-            TimeSortedCollection<UsedUnderlyingSymbol> candidates = new TimeSortedCollection<UsedUnderlyingSymbol>(
-                Database.GetUsedUnderlyingSymbols(usedSymbol => 
-                    searchSymbol.Length == usedSymbol.Symbol.Length
-                    && StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1));
+            return new FilledOrder(overrideSymbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time, quote);
+        }
 
-            FilledOrder? filledOrder = null;
-            List<UsedUnderlyingSymbol> validCloseSymbols = new List<UsedUnderlyingSymbol>();
-            // Look at most recent used symbols first
-            foreach (UsedUnderlyingSymbol usedSymbol in candidates.Reverse())
-            {
-                string newOptionSymbol = OptionSymbolUtils.ChangeUnderlyingSymbol(usedSymbol.Symbol, Symbol);
-                UnvalidatedFilledOrder unvalidatedOrder = new UnvalidatedFilledOrder(newOptionSymbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time);
-
-                bool isNewSymbolValid = MarketDataClient.ValidateWithinTodaysRangeAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
-                if (isNewSymbolValid)
-                {
-                    // If this happens more than once, we will error and log all validCloseSymbols
-                    filledOrder = new FilledOrder(unvalidatedOrder, quote);
-                    validCloseSymbols.Add(usedSymbol);
-                }
-            }
-
-            if (filledOrder != null && validCloseSymbols.Count == 1)
-            {
-                Log.Information("Found closely related symbol {Symbol} to replace invalid symbol {OldSymbol}", filledOrder.Symbol, Symbol);
-                return filledOrder;
-            }
-            else if (validCloseSymbols.Count == 0)
-            {
-                ModelBuilderException ex = new ModelBuilderException("No closely related symbol found in database", this);
-                Log.Error(ex, "No closely related symbol found in database");
-                throw ex;
-            }
-            else // (validCloseSymbols.Count > 1)
-            {
-                ModelBuilderException ex = new ModelBuilderException("Multiple valid and closely related symbols exist", this);
-                Log.Error(ex, "Multiple valid and closely related symbols exist: {@ValidCloseSymbols}", validCloseSymbols);
-                throw ex;
-            }
+        protected override bool ValidateWithSymbolOverride(string overrideSymbol, out OptionQuote? quote)
+        {
+            return MarketDataClient.ValidateWithinTodaysRangeAndGetQuote(overrideSymbol, (float)FilledPrice, out quote);
         }
 
         protected override void FinishBuildLevel()
