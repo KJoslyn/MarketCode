@@ -31,14 +31,14 @@ namespace LottoXService
             SYMBOL = 0, FILLED_PRICE, INSTRUCTION, LIMIT_OR_MARKET, QUANTITY, SPREAD, ACCT_ALIAS, TIME, DONE
         }
 
-        public override bool Done => _buildLevel == BuildLevel.DONE;
+        protected override bool Done => _buildLevel == BuildLevel.DONE;
         private double FilledPrice { get; set; }
         private string Instruction { get; set; }
         private string OrderType { get; set; }
         private double Limit { get; set; }
         private DateTime Time { get; set; }
 
-        public override void TakeNextWord(Word word)
+        protected override void TakeNextWord(Word word)
         {
             _thisLevelCounter++;
             word.Text = word.Text.Replace("|", "");
@@ -93,8 +93,51 @@ namespace LottoXService
                 }
                 else
                 {
-                    // TODO: Finish
+                    Log.Information("Found invalid symbol/price in parsed order: Symbol {Symbol}. Builder {@Builder}", this);
+                    return CreateFilledOrderFromCloseUsedSymbol();
                 }
+            }
+        }
+
+        private FilledOrder CreateFilledOrderFromCloseUsedSymbol()
+        {
+            string searchSymbol = OptionSymbolUtils.GetUnderlyingSymbol(Symbol);
+            TimeSortedCollection<UsedUnderlyingSymbol> candidates = new TimeSortedCollection<UsedUnderlyingSymbol>(
+                Database.GetUsedUnderlyingSymbols(usedSymbol => StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1));
+
+            FilledOrder? filledOrder = null;
+            List<UsedUnderlyingSymbol> validCloseSymbols = new List<UsedUnderlyingSymbol>();
+            // Look at most recent used symbols first
+            foreach (UsedUnderlyingSymbol usedSymbol in candidates.Reverse())
+            {
+                string newOptionSymbol = OptionSymbolUtils.ChangeUnderlyingSymbol(usedSymbol.Symbol, Symbol);
+                UnvalidatedFilledOrder unvalidatedOrder = new UnvalidatedFilledOrder(newOptionSymbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time);
+
+                bool isNewSymbolValid = MarketDataClient.ValidateOrderAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
+                if (isNewSymbolValid)
+                {
+                    // If this happens more than once, we will error and log all validCloseSymbols
+                    filledOrder = new FilledOrder(unvalidatedOrder, quote);
+                    validCloseSymbols.Add(usedSymbol);
+                }
+            }
+
+            if (filledOrder != null && validCloseSymbols.Count == 1)
+            {
+                Log.Information("Found closely related symbol {Symbol} to replace invalid symbol {OldSymbol}", filledOrder.Symbol, Symbol);
+                return filledOrder;
+            }
+            else if (validCloseSymbols.Count == 0)
+            {
+                ModelBuilderException ex = new ModelBuilderException("No closely related symbol found in database", this);
+                Log.Error(ex, "No closely related symbol found in database");
+                throw ex;
+            }
+            else // (validCloseSymbols.Count > 1)
+            {
+                ModelBuilderException ex = new ModelBuilderException("Multiple valid and closely related symbols exist", this);
+                Log.Error(ex, "Multiple valid and closely related symbols exist: {@ValidCloseSymbols}", validCloseSymbols);
+                throw ex;
             }
         }
 
@@ -163,11 +206,11 @@ namespace LottoXService
 
         private string? GetInstruction(string fuzzyInstructionStr)
         {
-            if (HammingDistance(fuzzyInstructionStr, "Buy to Open") <= 2)
+            if (StringUtils.HammingDistance(fuzzyInstructionStr, "Buy to Open") <= 2)
             {
                 return InstructionType.BUY_TO_OPEN;
             }
-            else if (HammingDistance(fuzzyInstructionStr, "Sell to Close") <= 2)
+            else if (StringUtils.HammingDistance(fuzzyInstructionStr, "Sell to Close") <= 2)
             {
                 return InstructionType.SELL_TO_CLOSE;
             }
@@ -177,23 +220,10 @@ namespace LottoXService
             }
         }
 
-        private int HammingDistance(string first, string second)
-        {
-            if (first.Length > second.Length)
-            {
-                second.Concat(new string('!', first.Length - second.Length));
-            }
-            else if (second.Length > first.Length)
-            {
-                first.Concat(new string('!', second.Length - first.Length));
-            }
-            return first.Zip(second, (a, b) => a != b).Count(diff => diff);
-        }
-
         private void TakeLimitOrMarket(Word word)
         {
             _currentStr += word.Text;
-            if (HammingDistance(_currentStr, "Market") <= 1)
+            if (StringUtils.HammingDistance(_currentStr, "Market") <= 1)
             {
                 OrderType = Core.Model.Constants.OrderType.MARKET;
                 FinishBuildLevel();
@@ -216,8 +246,8 @@ namespace LottoXService
 
         private void TakeSpread(Word word)
         {
-            if (HammingDistance(word.Text, "Vertical") <= 2 ||
-                HammingDistance(word.Text, "Butterfly") <= 2)
+            if (StringUtils.HammingDistance(word.Text, "Vertical") <= 2 ||
+                StringUtils.HammingDistance(word.Text, "Butterfly") <= 2)
             {
                 Reset();
             }

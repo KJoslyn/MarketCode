@@ -1,6 +1,8 @@
 ﻿using AzureOCR;
+using Core;
 using Core.Model;
 using Microsoft.Azure.CognitiveServices.Vision.ComputerVision.Models;
+using Serilog;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -11,7 +13,7 @@ namespace LottoXService
     {
         public ImageToPositionsConverter(OCRConfig config, ModelBuilder<Position> builder) : base(config, builder) { }
 
-        protected override bool Validate(IEnumerable<Line> lines)
+        protected override void ValidateOrThrow(IEnumerable<Line> lines)
         {
             List<string> lineTexts = lines.Select((line, index) => line.Text).ToList();
 
@@ -28,7 +30,12 @@ namespace LottoXService
             string joined = string.Join(" ", subList);
             Regex headersRegex = new Regex("^Symbol (. )?Quantity Last Aver");
 
-            return headersRegex.IsMatch(joined);
+            if (!headersRegex.IsMatch(joined))
+            {
+                InvalidPortfolioStateException ex = new InvalidPortfolioStateException("Invalid portfolio state when attempting to parse positions");
+                Log.Warning(ex, "Invalid portfolio state attempting to parse positions. Extracted text: {@Text}", lineTexts);
+                throw ex;
+            }
         }
     }
 }

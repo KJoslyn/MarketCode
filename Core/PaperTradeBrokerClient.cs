@@ -97,7 +97,7 @@ namespace Core
             }
 
             PositionDelta delta = new PositionDelta(deltaType, order.Symbol, order.Quantity, price, percent);
-            PositionDB.InsertDeltaAndUpsertUsedEquitySymbol(delta);
+            PositionDB.InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
 
             float oldQuantity = currentPos?.LongQuantity ?? 0;
             float oldAveragePrice = currentPos?.AveragePrice ?? 0;
@@ -133,7 +133,7 @@ namespace Core
 
             PositionDelta delta = new PositionDelta(DeltaType.SELL, order.Symbol, order.Quantity, price, percent);
 
-            PositionDB.InsertDeltaAndUpsertUsedEquitySymbol(delta);
+            PositionDB.InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
             PositionDB.DeletePosition(currentPos);
 
             float newQuantity = currentPos.LongQuantity - delta.Quantity;

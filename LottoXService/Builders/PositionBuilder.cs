@@ -22,11 +22,11 @@ namespace LottoXService
             SYMBOL = 0, QUANTITY, LAST, AVERAGE, PERCENT_SIGN, MARKET_VALUE, DONE
         }
 
-        public override bool Done => _buildLevel == BuildLevel.DONE;
+        protected override bool Done => _buildLevel == BuildLevel.DONE;
         private double Last { get; set; }
         private double Average { get; set; }
 
-        public override void TakeNextWord(Word word)
+        protected override void TakeNextWord(Word word)
         {
             word.Text = word.Text.Replace("|", "");
 

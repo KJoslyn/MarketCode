@@ -5,10 +5,6 @@ namespace AzureOCR
 {
     public abstract class ModelBuilder<T> : IModelBuilder
     {
-        public abstract bool Done { get; }
-
-        public abstract void TakeNextWord(Word word);
-
         public IEnumerable<T> CreateModels(IEnumerable<Line> lines)
         {
             List<T> models = new List<T>();
@@ -27,7 +23,11 @@ namespace AzureOCR
             return models;
         }
 
-        public T BuildAndReset()
+        protected abstract bool Done { get; }
+
+        protected abstract void TakeNextWord(Word word);
+
+        protected T BuildAndReset()
         {
             if (!Done)
             {

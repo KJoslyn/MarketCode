@@ -27,20 +27,11 @@ namespace AzureOCR
             string writeToJsonPath = null)
         {
             IEnumerable<Line> lines = await ExtractLinesFromImage(filePath, writeToJsonPath);
-
-            bool valid = Validate(lines);
-            if (!valid)
-            {
-                Exception ex = new InvalidImageException("Invalid portfolio state");
-                List<string> lineTexts = lines.Select((line, index) => line.Text).ToList();
-                Log.Warning(ex, "Invalid portfolio state. Extracted text: {@Text}", lineTexts);
-                throw ex;
-            }
-
+            ValidateOrThrow(lines);
             return _builder.CreateModels(lines).ToList();
         }
 
-        protected abstract bool Validate(IEnumerable<Line> lines);
+        protected abstract void ValidateOrThrow(IEnumerable<Line> lines);
 
         private async Task<IList<Line>> ExtractLinesFromImage(string filePath, string writeToJsonPath = null)
         {

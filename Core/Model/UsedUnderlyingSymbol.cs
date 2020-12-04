@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace Core.Model
 {
-    public class UsedUnderlyingSymbol
+    public class UsedUnderlyingSymbol : HasTime
     {
         private static Regex _underlyingSymbolRegex = new Regex(@"^[A-Z]{1,5}$");
 
@@ -15,14 +15,14 @@ namespace Core.Model
         {
             string underlyingSymbol = _underlyingSymbolRegex.IsMatch(symbol)
                 ? symbol
-                : OptionSymbolUtils.GetEquitySymbol(symbol);
+                : OptionSymbolUtils.GetUnderlyingSymbol(symbol);
 
             Symbol = underlyingSymbol;
-            LastUsedTime = lastUsedTime;
+            Time = lastUsedTime;
         }
 
         public string Symbol { get; init; }
-        public DateTime LastUsedTime { get; set; }
+        public DateTime Time { get; init; }
         public string Id { get => Symbol; }
     }
 }

@@ -16,7 +16,17 @@ namespace Core
         public static bool IsCall(string symbol) => _callRegex.IsMatch(symbol);
         public static bool IsPut(string symbol) => _putRegex.IsMatch(symbol);
 
-        public static string GetEquitySymbol(string symbol)
+        public static string ChangeUnderlyingSymbol(string newUnderlyingSymbol, string originalOptionSymbol)
+        {
+            GroupCollection matchGroups = _optionSymbolRegex.Match(originalOptionSymbol).Groups;
+            return string.Format("{0}_{1}{2}{3}",
+                newUnderlyingSymbol,
+                matchGroups[2].Value,
+                matchGroups[3].Value,
+                matchGroups[4].Value);
+        }
+
+        public static string GetUnderlyingSymbol(string symbol)
         {
             GroupCollection matchGroups = _optionSymbolRegex.Match(symbol).Groups;
             if (matchGroups.Count < 2)

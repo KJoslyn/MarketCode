@@ -119,8 +119,8 @@ namespace LottoXService
             TimeSpan marketOpenTime = new TimeSpan(9, 30, 0);
             TimeSpan marketCloseTime = new TimeSpan(16, 0, 0);
 
-            int invalidCount = 0;
-            int unexpectedErrorCount = 0;
+            int invalidPortfolioStateCount = 0;
+            int errorCount = 0;
 
             //string seedOrdersFilename = "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-4173.png";
             string seedOrdersFilename = "";
@@ -153,6 +153,16 @@ namespace LottoXService
                         deltas = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
                         seedOrdersFilename = "";
                     }
+                    else if (errorCount > 0
+                        || invalidPortfolioStateCount > 0)
+                    {
+                        Log.Information("***Getting live deltas after error");
+                        deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
+                        if (deltas.Count > 0 )
+                        {
+                            await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
+                        }
+                    }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
                         Log.Information("***Change in top orders detected- getting live orders");
@@ -174,22 +184,19 @@ namespace LottoXService
                         BrokerClient.PlaceOrder(order);
                     }
 
-                    invalidCount = 0;
-                    unexpectedErrorCount = 0;
+                    invalidPortfolioStateCount = 0;
+                    errorCount = 0;
                 }
-                catch (Exception ex) when (
-                    ex is InvalidPortfolioStateException ||
-                    ex is InvalidImageException
-                )
+                catch (InvalidPortfolioStateException)
                 {
-                    invalidCount++;
+                    invalidPortfolioStateCount++;
 
-                    if (invalidCount == 2)
+                    if (invalidPortfolioStateCount == 2)
                     {
-                        Log.Error("Portfolio found invalid {InvalidCount} times", invalidCount);
-                    } else if (invalidCount > 2)
+                        Log.Error("Portfolio found invalid {InvalidCount} times", invalidPortfolioStateCount);
+                    } else if (invalidPortfolioStateCount > 2)
                     {
-                        Log.Fatal("Portfolio found invalid {InvalidCount} times", invalidCount);
+                        Log.Fatal("Portfolio found invalid {InvalidCount} times", invalidPortfolioStateCount);
                         break;
                     }
                     await LivePortfolioClient.Login();
@@ -203,29 +210,35 @@ namespace LottoXService
                 }
                 catch (OptionParsingException ex)
                 {
-                    Log.Fatal(ex, "Error parsing option symbol. Symbol {Symbol}", ex.Symbol);
+                    Log.Fatal(ex, "Error parsing option symbol. Symbol {Symbol}. Terminating program.", ex.Symbol);
                     break;
                 }
                 catch (ArgumentException ex)
                 {
-                    Log.Fatal(ex, "Arument exception encountered");
+                    Log.Fatal(ex, "Arument exception encountered- terminating program.");
                     break;
                 }
                 catch (ModelBuilderException ex)
                 {
-                    Log.Fatal(ex, "Model builder exception encountered. Builder {@ModelBuilder}", ex.Builder);
-                    break;
+                    errorCount++;
+
+                    if (errorCount > 2)
+                    {
+                        Log.Fatal(ex, "Too many consecutive errors encountered. Terminating program. Error count = {ErrorCount}", errorCount);
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    unexpectedErrorCount++;
+                    errorCount++;
 
-                    if (unexpectedErrorCount < 2)
+                    if (errorCount <= 2)
                     {
-                        Log.Error(ex, "Unexpected error: count = {ErrorCount}", unexpectedErrorCount);
-                    } else if (unexpectedErrorCount > 2)
+                        Log.Error(ex, "Unexpected error: count = {ErrorCount}", errorCount);
+                    } 
+                    else if (errorCount > 2)
                     {
-                        Log.Fatal(ex, "Unexpected error: count = {ErrorCount}", unexpectedErrorCount);
+                        Log.Fatal(ex, "Too many consecutive errors encountered. Terminating program. Error count = {ErrorCount}", errorCount);
                         break;
                     }
                 }
