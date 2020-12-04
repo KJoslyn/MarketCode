@@ -86,7 +86,7 @@ namespace LottoXService
             }
             else
             {
-                bool isValid = MarketDataClient.ValidateOrderAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
+                bool isValid = MarketDataClient.ValidateWithinTodaysRangeAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
                 if (isValid)
                 {
                     return new FilledOrder(unvalidatedOrder, quote);
@@ -103,7 +103,9 @@ namespace LottoXService
         {
             string searchSymbol = OptionSymbolUtils.GetUnderlyingSymbol(Symbol);
             TimeSortedCollection<UsedUnderlyingSymbol> candidates = new TimeSortedCollection<UsedUnderlyingSymbol>(
-                Database.GetUsedUnderlyingSymbols(usedSymbol => StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1));
+                Database.GetUsedUnderlyingSymbols(usedSymbol => 
+                    searchSymbol.Length == usedSymbol.Symbol.Length
+                    && StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1));
 
             FilledOrder? filledOrder = null;
             List<UsedUnderlyingSymbol> validCloseSymbols = new List<UsedUnderlyingSymbol>();
@@ -113,7 +115,7 @@ namespace LottoXService
                 string newOptionSymbol = OptionSymbolUtils.ChangeUnderlyingSymbol(usedSymbol.Symbol, Symbol);
                 UnvalidatedFilledOrder unvalidatedOrder = new UnvalidatedFilledOrder(newOptionSymbol, (float)FilledPrice, Instruction, OrderType, (float)Limit, Quantity, Time);
 
-                bool isNewSymbolValid = MarketDataClient.ValidateOrderAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
+                bool isNewSymbolValid = MarketDataClient.ValidateWithinTodaysRangeAndGetQuote(unvalidatedOrder, out OptionQuote? quote);
                 if (isNewSymbolValid)
                 {
                     // If this happens more than once, we will error and log all validCloseSymbols

@@ -1,4 +1,5 @@
 ﻿using Core.Model;
+using Core.Model.Constants;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -15,23 +16,28 @@ namespace Core
 
         public abstract bool IsMarketOpenToday();
 
-        public bool ValidateOrderAndGetQuote(UnvalidatedFilledOrder order, out OptionQuote? quote)
+        public bool ValidateWithinTodaysRangeAndGetQuote(UnvalidatedFilledOrder order, out OptionQuote? quote)
+        {
+            return ValidateWithinTodaysRangeAndGetQuote(order.Symbol, order.Price, out quote);
+        }
+
+        public bool ValidateWithinTodaysRangeAndGetQuote(string symbol, float price, out OptionQuote? quote)
         {
             quote = null;
             try
             {
-                quote = GetOptionQuote(order.Symbol);
+                quote = GetOptionQuote(symbol);
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Error getting quote for symbol {Symbol}", order.Symbol);
+                Log.Information(ex, "Error getting quote for symbol {Symbol}", symbol);
                 return false;
             }
 
-            if (order.Price < quote.LowPrice ||
-                order.Price > quote.HighPrice)
+            if (price < quote.LowPrice ||
+                price > quote.HighPrice)
             {
-                Log.Warning("Order price not within day's range- symbol {Symbol}, order {@Order}, quote {@Quote}", order.Symbol, order, quote);
+                Log.Information("Price not within day's range- symbol {Symbol}, quote {@Quote}", symbol, quote);
                 return false;
             }
             return true;
