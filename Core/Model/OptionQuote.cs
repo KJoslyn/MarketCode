@@ -21,6 +21,8 @@ namespace Core.Model
             QuoteTimeInLong = longTime;
         }
 
+        public OptionQuote() { }
+
         private DateTime? _time;
 
         public float BidPrice { get; init; }

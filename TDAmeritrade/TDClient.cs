@@ -148,7 +148,7 @@ namespace TDAmeritrade
         //{
         //    Regex optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+(.\d)?)");
         //    GroupCollection matchGroups = optionSymbolRegex.Match(symbol).Groups;
-        //    string equitySymbol = matchGroups[1].Value;
+        //    string underlyingSymbol = matchGroups[1].Value;
         //    string date = DateTime.ParseExact(matchGroups[2].Value, "yyMMdd", CultureInfo.InvariantCulture)
         //        .ToString("yyyy-MM-dd");
         //    string contractType = matchGroups[3].Value == "C"
@@ -158,7 +158,7 @@ namespace TDAmeritrade
 
         //    RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/chains");
         //    RestRequest request = CreateRequest(Method.GET);
-        //    request.AddQueryParameter("symbol", equitySymbol);
+        //    request.AddQueryParameter("symbol", underlyingSymbol);
         //    request.AddQueryParameter("contractType", contractType);
         //    request.AddQueryParameter("includeQuotes", "TRUE");
         //    request.AddQueryParameter("strike", strike);

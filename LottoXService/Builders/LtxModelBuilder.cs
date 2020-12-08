@@ -66,7 +66,6 @@ namespace LottoXService
             else if (validCloseSymbols.Count == 0)
             {
                 ModelBuilderException ex = new ModelBuilderException("No closely related symbol found in database", this);
-                Log.Error(ex, "No closely related symbol found in database");
                 throw ex;
             }
             else // (validCloseSymbols.Count > 1)
@@ -137,7 +136,7 @@ namespace LottoXService
                 //Log.Error(ex, "Could not parse quantity from positions list. Symbol {Symbol}. BuilderType {BuilderType}", Symbol, this.GetType().Name);
 
                 // The builder subclass may wish to override quantity in this method or in a subsequent method using other detected fields.
-                Log.Information("*** Could not parse quantity- assuming 1. Symbol {Symbol}. BuilderType {BuilderType}", Symbol, this.GetType().Name);
+                Log.Information("*** Could not parse quantity- assuming 1. Symbol {Symbol}. Word {@Word}. BuilderType {BuilderType}", Symbol, word, this.GetType().Name);
                 Quantity = quantity;
                 FinishBuildLevel();
             }

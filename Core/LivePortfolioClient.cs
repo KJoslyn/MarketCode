@@ -15,19 +15,10 @@ namespace Core
             Database = database;
             MarketDataClient = marketDataClient;
 
-            //Log.Information("INSERTING POSITIONS");
-            //Database.InsertPosition(new Position("ACB_201218C8", 5, (float)0.70));
-            //Database.InsertPosition(new Position("ACB_210115C10", 10, (float)0.76));
-            //Database.InsertPosition(new Position("AMZN_201204C3220", 1, (float)26.41));
-            //Database.InsertPosition(new Position("EXPE_201204C125", 10, (float)2.32));
-            //Database.InsertPosition(new Position("EXPE_201211C125", 5, (float)3.84));
-            //Database.InsertPosition(new Position("FIZZ_201218C100", 15, (float)4.41));
-            //Database.InsertPosition(new Position("FIZZ_201218C115", 30, (float)1.25));
-            //Database.InsertPosition(new Position("NFLX_201204C530", 60, (float)0.78));
-            //Database.InsertPosition(new Position("NFLX_201211C530", 20, (float)2.32));
-            //Database.InsertPosition(new Position("NIO_201204C55", 20, (float)1.94));
-            //Database.InsertPosition(new Position("WKHS_201204C28", 40, (float)1.15));
-            //Database.InsertPosition(new Position("WMT_201204C155", 50, (float)0.45));
+            Log.Information("INSERTING POSITIONS");
+            Database.InsertPosition(new Position("BR_201218C145", 5, (float)5.40));
+            Database.InsertPosition(new Position("MARA_201218C6", 30, (float)0.90));
+            Database.InsertPosition(new Position("Z_201218C105", 5, (float)5.70));
         }
 
         protected PortfolioDatabase Database { get; init; }

@@ -134,9 +134,10 @@ namespace LottoXService
         private void TakeFilledPrice(Word word)
         {
             _currentStr += word.Text;
-            if (_priceRegex.IsMatch(_currentStr))
+            Match match = _priceRegex.Match(_currentStr);
+            if (match.Success)
             {
-                FilledPrice = double.Parse(ReplaceSpaceOrCommaWithPeriod(_currentStr));
+                FilledPrice = double.Parse(ReplaceSpaceOrCommaWithPeriod(match.Groups[0].Value));
                 FinishBuildLevel();
             }
             else if (_thisLevelCounter == 1)
@@ -156,10 +157,16 @@ namespace LottoXService
             if (_thisLevelCounter == 3)
             {
                 string? instruction = GetInstruction(_currentStr);
-                if (instruction != null)
+                if (instruction != null &&
+                    (instruction == InstructionType.BUY_TO_OPEN || instruction == InstructionType.SELL_TO_CLOSE))
                 {
                     Instruction = instruction;
                     FinishBuildLevel();
+                }
+                else if (instruction != null &&
+                    (instruction == InstructionType.SELL_TO_OPEN || instruction == InstructionType.BUY_TO_CLOSE))
+                {
+                    Reset();
                 }
                 else
                 {
@@ -182,6 +189,14 @@ namespace LottoXService
             {
                 return InstructionType.SELL_TO_CLOSE;
             }
+            else if (StringUtils.HammingDistance(fuzzyInstructionStr, "Sell to Open") <= 2)
+            {
+                return InstructionType.SELL_TO_OPEN;
+            }
+            else if (StringUtils.HammingDistance(fuzzyInstructionStr, "Buy to Close") <= 2)
+            {
+                return InstructionType.BUY_TO_CLOSE;
+            }
             else
             {
                 return null;
@@ -191,15 +206,18 @@ namespace LottoXService
         private void TakeLimitOrMarket(Word word)
         {
             _currentStr += word.Text;
+
+            Match priceMatch = _priceRegex.Match(_currentStr);
+
             if (StringUtils.HammingDistance(_currentStr, "Market") <= 1)
             {
                 OrderType = Core.Model.Constants.OrderType.MARKET;
                 FinishBuildLevel();
             }
-            else if (_priceRegex.IsMatch(_currentStr))
+            else if (priceMatch.Success)
             {
                 OrderType = Core.Model.Constants.OrderType.LIMIT;
-                Limit = double.Parse(ReplaceSpaceOrCommaWithPeriod(_currentStr));
+                Limit = double.Parse(ReplaceSpaceOrCommaWithPeriod(priceMatch.Groups[0].Value));
                 FinishBuildLevel();
             }
             else if (_thisLevelCounter == 1)

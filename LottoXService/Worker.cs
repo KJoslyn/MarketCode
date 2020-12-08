@@ -220,6 +220,7 @@ namespace LottoXService
                 }
                 catch (ModelBuilderException ex)
                 {
+                    Log.Error(ex, "ModelBuilderException encountered");
                     errorCount++;
 
                     if (errorCount > 2)
