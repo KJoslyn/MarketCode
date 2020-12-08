@@ -124,7 +124,7 @@ namespace Core
             return deltas;
         }
 
-        public IEnumerable<PositionDelta> ComputeDeltasAndUpdateTables(IEnumerable<Position> livePositions)
+        public TimeSortedCollection<PositionDelta> ComputeDeltasAndUpdateTables(IEnumerable<Position> livePositions, Dictionary<string, FilledOrder> symbolToRecentOrderDict)
         {
             IList<PositionDelta> deltas = new List<PositionDelta>();
             IEnumerable<Position> oldPositions = GetStoredPositions();
@@ -134,12 +134,15 @@ namespace Core
                 Position? oldPos = oldPositions.Where(pos => pos.Symbol == livePos.Symbol).FirstOrDefault();
                 if (oldPos == null)
                 {
+                    FilledOrder? recentOrder = symbolToRecentOrderDict.GetValueOrDefault(livePos.Symbol);
                     PositionDelta delta = new PositionDelta(
                         DeltaType.NEW,
                         livePos.Symbol,
                         livePos.LongQuantity,
                         livePos.AveragePrice,
-                        0);
+                        0,
+                        recentOrder?.Quote,
+                        recentOrder?.Time);
                     deltas.Add(delta);
                 }
             }
@@ -147,14 +150,17 @@ namespace Core
             {
                 PositionDelta? delta = null;
                 Position? livePos = livePositions.Where(pos => pos.Symbol == oldPos.Symbol).FirstOrDefault();
+                FilledOrder? recentOrder = symbolToRecentOrderDict.GetValueOrDefault(oldPos.Symbol);
                 if (livePos == null)
                 {
                     delta = new PositionDelta(
                         DeltaType.SELL,
                         oldPos.Symbol,
                         oldPos.LongQuantity,
-                        0, // Sell price is unknown
-                        1);
+                        0, // Sell price is unknown (even if we have a recent order, since the recent order may not be exact sell order. It is simply the most recent order for that symbol.)
+                        1,
+                        recentOrder?.Quote,
+                        recentOrder?.Time);
                 }
                 else if (livePos.LongQuantity > oldPos.LongQuantity)
                 {
@@ -165,7 +171,9 @@ namespace Core
                         oldPos.Symbol,
                         deltaContracts,
                         addPrice,
-                        deltaContracts / oldPos.LongQuantity);
+                        deltaContracts / oldPos.LongQuantity,
+                        recentOrder?.Quote,
+                        recentOrder?.Time);
                 }
                 else if (livePos.LongQuantity < oldPos.LongQuantity)
                 {
@@ -175,18 +183,26 @@ namespace Core
                         oldPos.Symbol,
                         deltaContracts,
                         0, // Sell price is unknown
-                        deltaContracts / oldPos.LongQuantity); ;
+                        deltaContracts / oldPos.LongQuantity,
+                        recentOrder?.Quote,
+                        recentOrder?.Time);
                 }
 
                 if (delta != null)
                 {
                     deltas.Add(delta);
                     InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
+
+                    FilledOrder? order = symbolToRecentOrderDict.GetValueOrDefault(delta.Symbol);
+                    if (order == null)
+                    {
+                        Log.Warning("Encountered delta without a recent order for this symbol {Symbol}. Delta {@Delta}", delta.Symbol, delta);
+                    }
                 }
             }
             UpdateAllPositions(livePositions);
 
-            return deltas;
+            return new TimeSortedCollection<PositionDelta>(deltas);
         }
 
         public void UpdateOrders(IEnumerable<UpdatedFilledOrder> updatedFilledOrders)

@@ -143,12 +143,9 @@ namespace LottoXService
                 double value = double.Parse(valueStr.Substring(0, valueStr.Length - 2));
 
                 double expectedValue = Quantity * Last * 100;
-                if (Math.Abs(value - expectedValue) / expectedValue > 0.05)
+                if (expectedValue == 0 ||
+                    Math.Abs(value - expectedValue) / expectedValue > 0.05)
                 {
-                    //ModelBuilderException ex = new ModelBuilderException("Expected value differs from detected live market value", this);
-                    //Log.Warning(ex, "Expected value differs from detected live market value. Symbol {Symbol}, Quantity {Quantity}, Last {Last}, MarketValue {MarketValue}",
-                    //    Symbol, Quantity, Last, value);
-                    //throw ex;
                     int correctedQuantity = (int)Math.Round(value / (Last * 100));
                     Log.Information("*** Expected value differs from detected live market value. Setting quantity to {NewQuantity}. Symbol {Symbol}, Quantity {Quantity}, Last {Last}, MarketValue {MarketValue}",
                         correctedQuantity, Symbol, Quantity, Last, value);

@@ -22,7 +22,8 @@ namespace Core.Model
             Price = price;
             Percent = percent;
             Quote = quote;
-            Time = time ?? DateTime.Now;
+            // If we don't have a time for this position delta, we will default to yesterday, to indicate that it may be old.
+            Time = time ?? DateTime.Now.AddDays(-1);
         }
 
         public string DeltaType { get; }

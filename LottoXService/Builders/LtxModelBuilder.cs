@@ -132,12 +132,12 @@ namespace LottoXService
             }
             else
             {
-                //ModelBuilderException ex = new ModelBuilderException("Could not parse quantity.", this);
-                //Log.Error(ex, "Could not parse quantity from positions list. Symbol {Symbol}. BuilderType {BuilderType}", Symbol, this.GetType().Name);
-
                 // The builder subclass may wish to override quantity in this method or in a subsequent method using other detected fields.
-                Log.Information("*** Could not parse quantity- assuming 1. Symbol {Symbol}. Word {@Word}. BuilderType {BuilderType}", Symbol, word, this.GetType().Name);
-                Quantity = quantity;
+                if (this is not FilledOrderBuilder)
+                {
+                    Log.Information("*** Could not parse quantity. Symbol {Symbol}. Word {@Word}. BuilderType {BuilderType}", Symbol, word, this.GetType().Name);
+                }
+                Quantity = 0;
                 FinishBuildLevel();
             }
         }

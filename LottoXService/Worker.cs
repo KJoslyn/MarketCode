@@ -150,27 +150,19 @@ namespace LottoXService
                     if (seedOrdersFilename.Length > 0)
                     {
                         Log.Information("*********Seeding live orders with file " + seedOrdersFilename);
-                        deltas = await LivePortfolioClient.GetLiveDeltasFromOrders(seedOrdersFilename);
+                        deltas = await LivePortfolioClient.GetLiveDeltasFromPositions(seedOrdersFilename);
                         seedOrdersFilename = "";
                     }
                     else if (errorCount > 0
                         || invalidPortfolioStateCount > 0)
                     {
                         Log.Information("***Getting live deltas after error");
-                        deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                        if (deltas.Count > 0 )
-                        {
-                            await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
-                        }
+                        deltas = await LivePortfolioClient.GetLiveDeltasFromPositions();
                     }
                     else if (await LivePortfolioClient.HaveOrdersChanged(null))
                     {
                         Log.Information("***Change in top orders detected- getting live orders");
-                        deltas = await LivePortfolioClient.GetLiveDeltasFromOrders();
-                        if (deltas.Count > 0 )
-                        {
-                            await LivePortfolioClient.CheckLivePositionsAgainstDatabasePositions();
-                        }
+                        deltas = await LivePortfolioClient.GetLiveDeltasFromPositions();
                     }
                     else
                     {

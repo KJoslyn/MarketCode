@@ -26,9 +26,8 @@ namespace Core
 
         public IEnumerable<Order> DecideOrdersTimeSorted(TimeSortedCollection<PositionDelta> deltas)
         {
-            IEnumerable<Order> orders = deltas.Select(delta => DecideOrder(delta))
+            return deltas.Select(delta => DecideOrder(delta))
                 .OfType<Order>(); // filter out nulls
-            return RemoveBuysIfSellExistsForSameSymbol(orders);
         }
 
         private Order? DecideOrder(PositionDelta delta)
@@ -61,28 +60,6 @@ namespace Core
                 Log.Error("Unrecognized deltaType: {type}", delta.DeltaType);
                 return null;
             }
-        }
-
-        private IEnumerable<Order> RemoveBuysIfSellExistsForSameSymbol(IEnumerable<Order> orders)
-        {
-            IList<Order> filteredOrders = orders.ToList();
-            IEnumerable<string> symbols = filteredOrders.Select(order => order.Symbol)
-                .Distinct();
-
-            foreach(string symbol in symbols)
-            {
-                IEnumerable<Order> buyOrders = filteredOrders.Where(order => order.Instruction == InstructionType.BUY_TO_OPEN);
-                Order? firstSellOrder = filteredOrders.Where(order => order.Instruction == InstructionType.SELL_TO_CLOSE).FirstOrDefault();
-                if (firstSellOrder != null)
-                {
-                    foreach (Order buyOrder in buyOrders)
-                    {
-                        Log.Warning("Removing buy order {@BuyOrder} because corresponding sell order exists: {@SellOrder}", buyOrder, firstSellOrder);
-                        filteredOrders.Remove(buyOrder);
-                    }
-                }
-            }
-            return filteredOrders;
         }
 
         private Order? DecideBuy(PositionDelta delta, Position? currentPos, OptionQuote quote)

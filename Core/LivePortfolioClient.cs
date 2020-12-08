@@ -66,10 +66,14 @@ namespace Core
             return result;
         }
 
-        public async Task<IEnumerable<PositionDelta>> GetLiveDeltasFromPositions()
+        public async Task<TimeSortedCollection<PositionDelta>> GetLiveDeltasFromPositions(string? ordersFilename = null)
         {
             IEnumerable<Position> livePositions = await RecognizeLivePositions();
-            return Database.ComputeDeltasAndUpdateTables(livePositions);
+            TimeSortedCollection<FilledOrder> liveOrders = await RecognizeLiveOrders(ordersFilename);
+
+            Dictionary<string, FilledOrder> symbolToRecentOrderDict = BuildSymbolToRecentOrderDictionary(liveOrders);
+
+            return Database.ComputeDeltasAndUpdateTables(livePositions, symbolToRecentOrderDict);
         }
 
         public async Task<TimeSortedCollection<PositionDelta>> GetLiveDeltasFromOrders(string? ordersFilename = null)
@@ -86,6 +90,21 @@ namespace Core
             Database.UpdateOrders(result.UpdatedFilledOrders);
 
             return Database.ComputeDeltasAndUpdateTables(result.NewFilledOrders);
+        }
+
+        private static Dictionary<string, FilledOrder> BuildSymbolToRecentOrderDictionary(TimeSortedCollection<FilledOrder> orders)
+        {
+            Dictionary<string, FilledOrder> dict = new Dictionary<string, FilledOrder>();
+            IEnumerable<FilledOrder> ordersRecentToOldest = orders.Reverse();
+
+            foreach (FilledOrder order in ordersRecentToOldest)
+            {
+                if (!dict.ContainsKey(order.Symbol))
+                {
+                    dict.Add(order.Symbol, order);
+                }
+            }
+            return dict;
         }
     }
 }
