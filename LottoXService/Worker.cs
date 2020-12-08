@@ -140,7 +140,7 @@ namespace LottoXService
                     // Or, wait until 9:30am
                     await Task.Delay(30 * 1000, stoppingToken);
 
-                    //continue;
+                    continue;
                 }
 
                 try

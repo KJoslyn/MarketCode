@@ -15,10 +15,10 @@ namespace Core
             Database = database;
             MarketDataClient = marketDataClient;
 
-            Log.Information("INSERTING POSITIONS");
-            Database.InsertPosition(new Position("BR_201218C145", 5, (float)5.40));
-            Database.InsertPosition(new Position("MARA_201218C6", 30, (float)0.90));
-            Database.InsertPosition(new Position("Z_201218C105", 5, (float)5.70));
+            //Log.Information("INSERTING POSITIONS");
+            //Database.InsertPosition(new Position("BR_201218C145", 5, (float)5.40));
+            //Database.InsertPosition(new Position("MARA_201218C6", 30, (float)0.90));
+            //Database.InsertPosition(new Position("Z_201218C105", 5, (float)5.70));
         }
 
         protected PortfolioDatabase Database { get; init; }
@@ -71,8 +71,18 @@ namespace Core
             IEnumerable<Position> livePositions = await RecognizeLivePositions();
             TimeSortedCollection<FilledOrder> liveOrders = await RecognizeLiveOrders(ordersFilename);
 
-            Dictionary<string, FilledOrder> symbolToRecentOrderDict = BuildSymbolToRecentOrderDictionary(liveOrders);
+            foreach (FilledOrder order in liveOrders)
+            {
+                if (!Database.OrderAlreadyExists(order))
+                {
+                    Database.InsertOrder(order);
+                }
+            }
+            //NewAndUpdatedFilledOrders result = Database.IdentifyNewAndUpdatedOrders(liveOrders, 10);
+            //Database.UpdateOrders(result.UpdatedFilledOrders);
+            //Database.InsertOrders(result.NewFilledOrders);
 
+            Dictionary<string, FilledOrder> symbolToRecentOrderDict = BuildSymbolToRecentOrderDictionary(liveOrders);
             return Database.ComputeDeltasAndUpdateTables(livePositions, symbolToRecentOrderDict);
         }
 
