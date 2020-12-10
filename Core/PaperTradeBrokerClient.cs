@@ -16,11 +16,11 @@ namespace Core
     {
         public PaperTradeBrokerClient(PortfolioDatabase positionDB, MarketDataClient marketDataClient)
         {
-            PositionDB = positionDB;
+            Database = positionDB;
             MarketDataClient = marketDataClient;
         }
 
-        private PortfolioDatabase PositionDB { get; init; }
+        public PortfolioDatabase Database { get; init; }
         private MarketDataClient MarketDataClient { get; init; }
 
         public Position? GetPosition(string symbol)
@@ -31,7 +31,7 @@ namespace Core
 
         public IEnumerable<Position> GetPositions()
         {
-            return PositionDB.GetStoredPositions();
+            return Database.GetStoredPositions();
         }
 
         public void PlaceOrder(Order order)
@@ -80,7 +80,7 @@ namespace Core
             {
                 percent = order.Quantity / currentPos.LongQuantity;
                 deltaType = DeltaType.ADD;
-                PositionDB.DeletePosition(currentPos);
+                Database.DeletePosition(currentPos);
             }
 
             if (price <= 0)
@@ -97,14 +97,14 @@ namespace Core
             }
 
             PositionDelta delta = new PositionDelta(deltaType, order.Symbol, order.Quantity, price, percent);
-            PositionDB.InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
+            Database.InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
 
             float oldQuantity = currentPos?.LongQuantity ?? 0;
             float oldAveragePrice = currentPos?.AveragePrice ?? 0;
             float newQuantity = oldQuantity + delta.Quantity;
             float newAvgPrice = (oldQuantity * oldAveragePrice + delta.Quantity * price) / newQuantity;
             Position newPos = new Position(order.Symbol, newQuantity, newAvgPrice);
-            PositionDB.InsertPosition(newPos);
+            Database.InsertPosition(newPos);
         }
 
         private void PlaceSellOrder(Order order, float price = 0)
@@ -133,14 +133,14 @@ namespace Core
 
             PositionDelta delta = new PositionDelta(DeltaType.SELL, order.Symbol, order.Quantity, price, percent);
 
-            PositionDB.InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
-            PositionDB.DeletePosition(currentPos);
+            Database.InsertDeltaAndUpsertUsedUnderlyingSymbol(delta);
+            Database.DeletePosition(currentPos);
 
             float newQuantity = currentPos.LongQuantity - delta.Quantity;
             if (newQuantity > 0)
             {
                 Position newPos = new Position(order.Symbol, newQuantity, currentPos.AveragePrice);
-                PositionDB.InsertPosition(newPos);
+                Database.InsertPosition(newPos);
             }
         }
 

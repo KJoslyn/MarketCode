@@ -21,6 +21,8 @@ namespace Core.Model
             Time = lastUsedTime;
         }
 
+        public UsedUnderlyingSymbol() { }
+
         public string Symbol { get; init; }
         public DateTime Time { get; init; }
         public string Id { get => Symbol; }

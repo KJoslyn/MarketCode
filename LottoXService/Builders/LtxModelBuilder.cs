@@ -37,15 +37,14 @@ namespace LottoXService
         protected T BuildModelFromSimilarUsedSymbol()
         {
             string searchSymbol = OptionSymbolUtils.GetUnderlyingSymbol(Symbol);
-            TimeSortedCollection<UsedUnderlyingSymbol> candidates = new TimeSortedCollection<UsedUnderlyingSymbol>(
-                Database.GetUsedUnderlyingSymbols(usedSymbol => 
-                    searchSymbol.Length == usedSymbol.Symbol.Length
-                    && StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1));
+            IEnumerable<UsedUnderlyingSymbol> candidates = Database.GetUsedUnderlyingSymbols(usedSymbol => 
+                searchSymbol.Length == usedSymbol.Symbol.Length
+                && StringUtils.HammingDistance(searchSymbol, usedSymbol.Symbol) == 1);
 
             T model = default(T);
             List<UsedUnderlyingSymbol> validCloseSymbols = new List<UsedUnderlyingSymbol>();
-            // Look at most recent used symbols first
-            foreach (UsedUnderlyingSymbol usedSymbol in candidates.Reverse())
+
+            foreach (UsedUnderlyingSymbol usedSymbol in candidates)
             {
                 string newOptionSymbol = OptionSymbolUtils.ChangeUnderlyingSymbol(usedSymbol.Symbol, Symbol);
 

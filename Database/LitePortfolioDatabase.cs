@@ -23,6 +23,12 @@ namespace Database
             //_db.GetCollection<Position>().DeleteMany(pos => pos.DateUpdated.Date == DateTime.Now.Date);
         }
 
+        public override void Dispose()
+        {
+            _db.Dispose();
+            _symbolsDb.Dispose();
+        }
+
         public override IEnumerable<Position> GetStoredPositions()
         {
             return _db.GetCollection<Position>().FindAll();
@@ -113,9 +119,5 @@ namespace Database
         {
             return _symbolsDb.GetCollection<UsedUnderlyingSymbol>().FindAll().Where(predicate);
         }
-
-        //public IEnumerable<UsedSymbol> GetSimilarUsedSymbols(string searchSymbol, int maxHammingDistance)
-        //{
-        //}
     }
 }

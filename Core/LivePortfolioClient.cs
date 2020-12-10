@@ -21,7 +21,7 @@ namespace Core
             //Database.InsertPosition(new Position("Z_201218C105", 5, (float)5.70));
         }
 
-        protected PortfolioDatabase Database { get; init; }
+        public PortfolioDatabase Database { get; init; }
 
         protected MarketDataClient MarketDataClient { get; init; }
 

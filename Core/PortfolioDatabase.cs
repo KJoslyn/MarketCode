@@ -10,6 +10,8 @@ namespace Core
 {
     public abstract class PortfolioDatabase
     {
+        public abstract void Dispose();
+
         public abstract IEnumerable<Position> GetStoredPositions();
 
         public abstract TimeSortedCollection<PositionDelta> GetStoredDeltas();

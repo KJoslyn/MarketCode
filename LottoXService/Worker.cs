@@ -76,6 +76,12 @@ namespace LottoXService
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             LivePortfolioClient.Logout();
+            LivePortfolioClient.Database.Dispose();
+            if (BrokerClient is PaperTradeBrokerClient)
+            {
+                ((PaperTradeBrokerClient)BrokerClient).Database.Dispose();
+            }
+            
             return base.StopAsync(cancellationToken);
         }
 
@@ -104,6 +110,9 @@ namespace LottoXService
             //Log.Information("Placing Order: {@Order}", o1);
 
             //IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4380.png");
+
+            //Order o1 = new Order("AAPL_201218C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03, new DateTime(2020, 12, 14, 11, 30, 45));
+            //BrokerClient.PlaceOrder(o1);
 
             //Log.Information("RETURNING EARLY");
             //return;
