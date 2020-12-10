@@ -6,12 +6,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+#nullable enable
 
 namespace Core.Model
 {
     public class Order : HasSymbolInStandardFormat
     {
-        public Order(string symbol, int quantity, string instruction, string orderType, float limit)
+        public Order(string symbol, int quantity, string instruction, string orderType, float limit, DateTime? cancelTime = null)
         {
             if (orderType == Core.Model.Constants.OrderType.LIMIT && limit <= 0)
             {
@@ -25,11 +26,13 @@ namespace Core.Model
             Instruction = instruction;
             OrderType = orderType;
             Limit = limit;
+            CancelTime = cancelTime;
         }
 
         public int Quantity { get; }
         public string Instruction { get; }
         public string OrderType { get; }
         public float Limit { get; }
+        public DateTime? CancelTime { get; }
     }
 }

@@ -10,6 +10,9 @@ namespace Core
     {
         public float LowBuyThreshold { get; init; }
         public float HighBuyThreshold { get; init; }
+        public float LowBuyLimit { get; init; }
+        public float HighBuyLimit { get; init; }
+        public int ThresholdLimitExpireMinutes { get; init; }
         public string LowBuyStrategy { get; init; } // One of the BuyStrategyType constants
         public string HighBuyStrategy { get; init; } // One of the BuyStrategyType constants
         public float MyPositionMaxSize { get; init; }

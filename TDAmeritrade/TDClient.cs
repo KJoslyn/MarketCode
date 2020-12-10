@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using TDAmeritrade.Authentication;
 using TDAmeritrade.Model;
 #nullable enable
@@ -93,13 +94,53 @@ namespace TDAmeritrade
 
         public void PlaceOrder(Order order)
         {
-            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
-            RestRequest request = CreateRequest(Method.POST);
-            string body = CreateOrderBody(order);
-            request.AddJsonBody(body);
-            IRestResponse response = ExecuteRequest(client, request);
-            Log.Information("Response: {@Response}", response);
+            //RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
+            //RestRequest request = CreateRequest(Method.POST);
+            //string body = CreateOrderBody(order);
+            //request.AddJsonBody(body);
+            //IRestResponse response = ExecuteRequest(client, request);
+            //Log.Information("Response: {@Response}", response);
+
+            IEnumerable<OrderBody> bodies = GetOrderBodies();
+            IEnumerable<Order> orders = GetOrders();
+
+            // Look at most recent "Accepted? or queued?" order. If it is not the expected symbol, quantity, etc., throw exception. Otherwise, get its orderId.
+            // use enteredTime
+
+            if (order.CancelTime != null)
+            {
+                new Thread(() => CancelOrderAtTime("", (DateTime)order.CancelTime)).Start();
+            }
             // TODO: make sure ok
+        }
+
+        private IEnumerable<OrderBody> GetOrderBodies()
+        {
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
+            RestRequest request = CreateRequest(Method.GET);
+            IRestResponse response = ExecuteRequest(client, request);
+            return JsonConvert.DeserializeObject<List<OrderBody>>(response.Content);
+        }
+
+        public IEnumerable<Order> GetOrders()
+        {
+            IEnumerable<OrderBody> bodies = GetOrderBodies();
+            return bodies.Select(body => CreateOrderFromOrderBody(body));
+        }
+
+        private static Order CreateOrderFromOrderBody(OrderBody body)
+        {
+            bool success = float.TryParse(body.Price, out float price);
+            price = success ? price : 0;
+            return new Order(body.Symbol, body.Quantity, body.Instruction, body.OrderType, price);
+        }
+
+        private static void CancelOrderAtTime(string orderId, DateTime cancelTime)
+        {
+            // Keep checking every minute. If the order is gone, end this thread.
+            // If time >= cancelTime, cancel the order.
+            double ms = (cancelTime - DateTime.Now).TotalMilliseconds;
+            Thread.Sleep((int)ms);
         }
 
         private RestRequest CreateRequest(Method method)
@@ -113,7 +154,7 @@ namespace TDAmeritrade
         private string CreateOrderBody(Order order)
         {
             Instrument instrument = new Instrument(order.Symbol, AssetType.OPTION, OptionSymbolUtils.StandardDateFormat);
-            OrderLeg orderLeg = new OrderLeg(order.Instruction, (int)order.Quantity, instrument);
+            OrderLeg orderLeg = new OrderLeg(order.Instruction, order.Quantity, instrument);
             List<OrderLeg> orderLegCollection = new List<OrderLeg>();
             orderLegCollection.Add(orderLeg);
             string? priceStr = null;
@@ -128,7 +169,7 @@ namespace TDAmeritrade
                 order.OrderType,
                 "NORMAL",
                 priceStr,
-                "DAY",
+                order.CancelTime == null ? "DAY" : "GOOD_TILL_CANCEL",
                 "SINGLE",
                 orderLegCollection);
 

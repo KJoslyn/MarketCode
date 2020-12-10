@@ -111,13 +111,13 @@ namespace Core
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
-                limit = delta.Price * (1 + _config.HighBuyThreshold);
+                limit = delta.Price * (1 + _config.HighBuyLimit);
                 quantity = DecideBuyQuantity(limit, delta, currentPos);
             }
             else if (withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
-                limit = delta.Price * (1 - _config.LowBuyThreshold);
+                limit = delta.Price * (1 - _config.LowBuyLimit);
                 quantity = DecideBuyQuantity(limit, delta, currentPos);
             }
             else

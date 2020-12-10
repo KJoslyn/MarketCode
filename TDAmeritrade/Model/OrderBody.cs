@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+#nullable enable
 
 namespace TDAmeritrade.Model
 {
@@ -12,10 +13,10 @@ namespace TDAmeritrade.Model
             string complexOrderStrategyType,
             string orderType,
             string session,
-            string price,
+            string? price,
             string duration,
             string orderStrategyType,
-            IList<OrderLeg> orderLegCollection) 
+            IList<OrderLeg> orderLegCollection)
         {
             ComplexOrderStrategyType = complexOrderStrategyType;
             OrderType = orderType;
@@ -32,12 +33,18 @@ namespace TDAmeritrade.Model
 
         public string Session { get; init; }
 
-        public string Price { get; init; }
+        public string? Price { get; init; }
 
         public string Duration { get; init; }
 
         public string OrderStrategyType { get; init; }
 
         public IList<OrderLeg> OrderLegCollection { get; init; }
+
+        public string? OrderId { get; init; }
+
+        public string Symbol { get => OrderLegCollection[0].Instrument.Symbol; }
+        public int Quantity { get => (int)OrderLegCollection[0].Quantity; }
+        public string Instruction { get => OrderLegCollection[0].Instruction; }
     }
 }
