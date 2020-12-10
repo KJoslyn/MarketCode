@@ -16,7 +16,7 @@ namespace TDAmeritrade.Model
             {
                 string instrumentSymbol = Instrument.Symbol;
                 return OptionSymbolUtils.IsOptionSymbol(instrumentSymbol)
-                    ? OptionSymbolUtils.ConvertToStandardDateFormat(Instrument.Symbol, Constants.TDOptionDateFormat)
+                    ? OptionSymbolUtils.ConvertToStandardDateFormatIfNecessary(Instrument.Symbol, Constants.TDOptionDateFormat)
                     : instrumentSymbol;
             }
         }

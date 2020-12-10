@@ -1,4 +1,5 @@
 ﻿using Core.Exceptions;
+using Serilog;
 using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -36,9 +37,18 @@ namespace Core
             return matchGroups[1].Value;
         }
 
-        public static string ConvertToStandardDateFormat(string symbol, string fromFormat)
+        public static string ConvertToStandardDateFormatIfNecessary(string symbol, string fromFormat)
         {
-            return ConvertDateFormat(symbol, fromFormat, StandardDateFormat);
+            bool isAlreadyStandardDateFormat = TryParseExactDate(symbol, StandardDateFormat, out DateTime date);
+            if (isAlreadyStandardDateFormat)
+            {
+                ValidateDateIsNotExpired(symbol, date);
+                return symbol;
+            }
+            else
+            {
+                return ConvertDateFormat(symbol, fromFormat, StandardDateFormat);
+            }
         }
 
         public static string ConvertDateFormat(string symbol, string fromFormat, string toFormat)
@@ -55,9 +65,9 @@ namespace Core
                 matchGroups[4].Value);
         }
 
-        public static void ValidateDateFormat(string symbol, string dateFormat)
+        public static void ValidateDateFormat(string symbol, string dateFormat, out DateTime date)
         {
-            bool isCorrectFormat = TryParseExactDate(symbol, dateFormat, out DateTime date);
+            bool isCorrectFormat = TryParseExactDate(symbol, dateFormat, out date);
             if (!isCorrectFormat)
             {
                 throw new OptionParsingException("Option date not in correct format. Expected " + dateFormat, symbol);
@@ -66,14 +76,19 @@ namespace Core
 
         public static void ValidateDateIsFormatAndNotExpired(string symbol, string dateFormat)
         {
-            bool isCorrectFormat = TryParseExactDate(symbol, dateFormat, out DateTime date);
-            if (!isCorrectFormat)
-            {
-                throw new OptionParsingException("Option date not in correct format. Expected " + dateFormat, symbol);
-            }
-            else if (date < DateTime.Now)
+            ValidateDateFormat(symbol, dateFormat, out DateTime date);
+            ValidateDateIsNotExpired(symbol, date);
+        }
+
+        public static void ValidateDateIsNotExpired(string symbol, DateTime date)
+        {
+            if (date.Date < DateTime.Now.Date)
             {
                 throw new OptionParsingException("Option date is expired", symbol);
+            }
+            else if (date.Year > DateTime.Now.Year + 1)
+            {
+                Log.Warning("Year {0} is far into the future! Symbol {Symbol}", DateTime.Now.Year, symbol);
             }
         }
 

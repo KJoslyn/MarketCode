@@ -14,7 +14,7 @@ namespace LottoXService
         private BuildLevel _buildLevel = BuildLevel.SYMBOL;
 
         // Market value for options always ends in .00 (0 cents.)
-        private Regex _marketValRegex = new Regex(@"[$S]\d+[., ]\d+[., ]00");
+        private Regex _marketValRegex = new Regex(@"[$S](\d+[., ]){1,2}00");
 
         public PositionBuilder(MarketDataClient client, PortfolioDatabase database) : base(client, database) { }
 
@@ -113,9 +113,18 @@ namespace LottoXService
         private void TakePrice(Word word, SetPriceDelegate del)
         {
             _currentStr += word.Text;
-            if (_priceRegex.IsMatch(_currentStr))
+            Match match = _priceRegex.Match(_currentStr);
+            if (match.Success)
             {
-                del(double.Parse(ReplaceSpaceOrCommaWithPeriod(_currentStr)));
+                try
+                {
+                    del(double.Parse(ReplaceSpaceOrCommaWithPeriod(match.Groups[0].Value)));
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Could not parse to double in TakePrice. Current string: {0}, word: {1}", _currentStr, word.Text);
+                    throw new ModelBuilderException("Could not parse to double in TakePrice.", this);
+                }
                 FinishBuildLevel();
             }
             else

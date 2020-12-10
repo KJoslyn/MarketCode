@@ -27,7 +27,7 @@ namespace TDAmeritrade.Model
         // the conversion will fail since it was already in the proper format.
         public override string Symbol
         {
-            get => OptionSymbolUtils.ConvertToStandardDateFormat(_symbol, Constants.TDOptionDateFormat);
+            get => OptionSymbolUtils.ConvertToStandardDateFormatIfNecessary(_symbol, Constants.TDOptionDateFormat);
             init { _symbol = value; }
         }
     }
