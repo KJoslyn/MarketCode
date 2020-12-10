@@ -251,15 +251,15 @@ namespace LottoXService
             {
                 FinishBuildLevel();
             }
-            else if (word.Text == "WMM")
-            {
-                IEnumerable<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol);
-                if (currentPositionSymbols.Contains(Symbol))
-                {
-                    Log.Warning("WMM order encountered for existing LottoX position. Treating as LTX order. Symbol {Symbol}, Builder {@Builder}", Symbol, this);
-                    FinishBuildLevel();
-                }
-            }
+            //else if (word.Text == "WMM")
+            //{
+            //    IEnumerable<string> currentPositionSymbols = Database.GetStoredPositions().Select(pos => pos.Symbol);
+            //    if (currentPositionSymbols.Contains(Symbol))
+            //    {
+            //        Log.Warning("WMM order encountered for existing LottoX position. Treating as LTX order. Symbol {Symbol}, Builder {@Builder}", Symbol, this);
+            //        FinishBuildLevel();
+            //    }
+            //}
             else
             {
                 Reset();
