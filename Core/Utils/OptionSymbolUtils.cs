@@ -39,10 +39,9 @@ namespace Core
 
         public static string ConvertToStandardDateFormatIfNecessary(string symbol, string fromFormat)
         {
-            bool isAlreadyStandardDateFormat = TryParseExactDate(symbol, StandardDateFormat, out DateTime date);
-            if (isAlreadyStandardDateFormat)
+            bool success = TryParseExactDate(symbol, StandardDateFormat, out DateTime date);
+            if (success && IsDateInNearFuture(date))
             {
-                ValidateDateIsNotExpired(symbol, date);
                 return symbol;
             }
             else
@@ -53,7 +52,7 @@ namespace Core
 
         public static string ConvertDateFormat(string symbol, string fromFormat, string toFormat)
         {
-            ValidateDateIsFormatAndNotExpired(symbol, fromFormat);
+            ValidateDateIsFormatAndInNearFuture(symbol, fromFormat);
 
             GroupCollection matchGroups = _optionSymbolRegex.Match(symbol).Groups;
             string date = DateTime.ParseExact(matchGroups[2].Value, fromFormat, CultureInfo.InvariantCulture).ToString(toFormat);
@@ -74,13 +73,13 @@ namespace Core
             }
         }
 
-        public static void ValidateDateIsFormatAndNotExpired(string symbol, string dateFormat)
+        public static void ValidateDateIsFormatAndInNearFuture(string symbol, string dateFormat)
         {
             ValidateDateFormat(symbol, dateFormat, out DateTime date);
-            ValidateDateIsNotExpired(symbol, date);
+            ValidateDateIsInNearFuture(symbol, date);
         }
 
-        public static void ValidateDateIsNotExpired(string symbol, DateTime date)
+        public static void ValidateDateIsInNearFuture(string symbol, DateTime date)
         {
             if (date.Date < DateTime.Now.Date)
             {
@@ -90,6 +89,12 @@ namespace Core
             {
                 Log.Warning("Year {0} is far into the future! Symbol {Symbol}", DateTime.Now.Year, symbol);
             }
+        }
+
+        public static bool IsDateInNearFuture(DateTime date)
+        {
+            return date.Date >= DateTime.Now.Date &&
+                date.Year <= DateTime.Now.Year + 1;
         }
 
         public static bool TryParseExactDate(string symbol, string dateFormat, out DateTime date)

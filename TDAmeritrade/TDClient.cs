@@ -45,7 +45,7 @@ namespace TDAmeritrade
         {
             if (OptionSymbolUtils.IsOptionSymbol(symbol))
             {
-                OptionSymbolUtils.ValidateDateIsFormatAndNotExpired(symbol, OptionSymbolUtils.StandardDateFormat);
+                OptionSymbolUtils.ValidateDateIsFormatAndInNearFuture(symbol, OptionSymbolUtils.StandardDateFormat);
             }
 
             IEnumerable<Position> positions = GetPositions();

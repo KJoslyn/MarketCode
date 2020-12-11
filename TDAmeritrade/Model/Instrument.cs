@@ -50,7 +50,7 @@ namespace TDAmeritrade.Model
             {
                 if (OptionSymbolUtils.IsOptionSymbol(value))
                 {
-                    OptionSymbolUtils.ValidateDateIsFormatAndNotExpired(value, Constants.TDOptionDateFormat);
+                    OptionSymbolUtils.ValidateDateIsFormatAndInNearFuture(value, Constants.TDOptionDateFormat);
                 }
                 _symbol = value;
             }

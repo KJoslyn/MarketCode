@@ -16,7 +16,7 @@ namespace Core.Model
             {
                 if (value != null && OptionSymbolUtils.IsOptionSymbol(value))
                 {
-                    OptionSymbolUtils.ValidateDateIsFormatAndNotExpired(value, OptionSymbolUtils.StandardDateFormat);
+                    OptionSymbolUtils.ValidateDateIsFormatAndInNearFuture(value, OptionSymbolUtils.StandardDateFormat);
                 }
                 _symbol = value;
             }
