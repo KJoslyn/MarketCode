@@ -111,8 +111,9 @@ namespace LottoXService
 
             //IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4380.png");
 
-            //Order o1 = new Order("AAPL_201218C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03, new DateTime(2020, 12, 14, 11, 30, 45));
+            //Order o1 = new Order("AAPL_201218C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03);
             //BrokerClient.PlaceOrder(o1);
+
 
             //Log.Information("RETURNING EARLY");
             //return;
@@ -178,11 +179,13 @@ namespace LottoXService
                         deltas = new TimeSortedCollection<PositionDelta>();
                     }
 
-                    IEnumerable<Order> orders = OrderManager.DecideOrdersTimeSorted(deltas);
-
-                    foreach (Order order in orders)
+                    foreach(PositionDelta delta in deltas)
                     {
-                        BrokerClient.PlaceOrder(order);
+                        Order? order = OrderManager.DecideOrder(delta);
+                        if (order != null)
+                        {
+                            BrokerClient.PlaceOrder(order);
+                        }
                     }
 
                     invalidPortfolioStateCount = 0;

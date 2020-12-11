@@ -67,6 +67,11 @@ namespace Core
             Log.Information("TDAm Order: {@Order}, string: {OrderStr}, Symbol {Symbol}", orderBody, orderBodyStr, order.Symbol);
         }
 
+        public IEnumerable<Order> GetOpenOrdersForSymbol(string symbol)
+        {
+            return new List<Order>();
+        }
+
         private void PlaceBuyOrder(Order order, float price = 0)
         {
             Position? currentPos = GetPosition(order.Symbol);

@@ -9,5 +9,6 @@ namespace Core
         public IEnumerable<Position> GetPositions();
         public Position? GetPosition(string symbol);
         public void PlaceOrder(Order order);
+        public IEnumerable<Order> GetOpenOrdersForSymbol(string symbol);
     }
 }

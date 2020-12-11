@@ -20,5 +20,6 @@ namespace Core
         public int MinutesUntilBuyOrderExpires { get; init; }
         public int MinutesUntilWarnOldSellOrder { get; init; }
         public double MaxBuyPrice { get; init; }
+        public int MaxNumOpenBuyOrdersForSymbol { get; init; }
     }
 }

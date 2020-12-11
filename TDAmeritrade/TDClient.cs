@@ -94,12 +94,17 @@ namespace TDAmeritrade
 
         public void PlaceOrder(Order order)
         {
-            //RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
-            //RestRequest request = CreateRequest(Method.POST);
-            //string body = CreateOrderBody(order);
-            //request.AddJsonBody(body);
-            //IRestResponse response = ExecuteRequest(client, request);
-            //Log.Information("Response: {@Response}", response);
+            if (order.Instruction == InstructionType.SELL_TO_CLOSE)
+            {
+                CancelExistingBuyOrders(order.Symbol);
+            }
+
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
+            RestRequest request = CreateRequest(Method.POST);
+            string body = CreateOrderBodyString(order);
+            request.AddJsonBody(body);
+            IRestResponse response = ExecuteRequest(client, request);
+            Log.Information("Response: {@Response}", response);
 
             IEnumerable<OrderBody> bodies = GetOrderBodies();
             IEnumerable<Order> orders = GetOrders();
@@ -114,12 +119,10 @@ namespace TDAmeritrade
             // TODO: make sure ok
         }
 
-        private IEnumerable<OrderBody> GetOrderBodies()
+        public IEnumerable<Order> GetOpenOrdersForSymbol(string symbol)
         {
-            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
-            RestRequest request = CreateRequest(Method.GET);
-            IRestResponse response = ExecuteRequest(client, request);
-            return JsonConvert.DeserializeObject<List<OrderBody>>(response.Content);
+            return GetOpenOrderBodiesForSymbol(symbol)
+                .Select(body => CreateOrderFromOrderBody(body));
         }
 
         public IEnumerable<Order> GetOrders()
@@ -128,11 +131,36 @@ namespace TDAmeritrade
             return bodies.Select(body => CreateOrderFromOrderBody(body));
         }
 
+        private IEnumerable<OrderBody> GetOpenOrderBodiesForSymbol(string symbol)
+        {
+            return GetOrderBodies()
+                .Where(body => body.Symbol == symbol && body.IsOpenOrder);
+        }
+
+        private void CancelExistingBuyOrders(string symbol)
+        {
+            IEnumerable<OrderBody> openOrders = GetOpenOrderBodiesForSymbol(symbol);
+            foreach(OrderBody body in openOrders)
+            {
+                RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders/" + body.OrderId);
+                RestRequest request = CreateRequest(Method.DELETE);
+                ExecuteRequest(client, request);
+            }
+        }
+
+        private IEnumerable<OrderBody> GetOrderBodies()
+        {
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
+            RestRequest request = CreateRequest(Method.GET);
+            IRestResponse response = ExecuteRequest(client, request);
+            return JsonConvert.DeserializeObject<List<OrderBody>>(response.Content);
+        }
+
         private static Order CreateOrderFromOrderBody(OrderBody body)
         {
             bool success = float.TryParse(body.Price, out float price);
             price = success ? price : 0;
-            return new Order(body.Symbol, body.Quantity, body.Instruction, body.OrderType, price);
+            return new Order(body.Symbol, (int)body.Quantity, body.Instruction, body.OrderType, price);
         }
 
         private static void CancelOrderAtTime(string orderId, DateTime cancelTime)
@@ -151,7 +179,7 @@ namespace TDAmeritrade
             return request;
         }
 
-        private string CreateOrderBody(Order order)
+        private static string CreateOrderBodyString(Order order)
         {
             Instrument instrument = new Instrument(order.Symbol, AssetType.OPTION, OptionSymbolUtils.StandardDateFormat);
             OrderLeg orderLeg = new OrderLeg(order.Instruction, order.Quantity, instrument);

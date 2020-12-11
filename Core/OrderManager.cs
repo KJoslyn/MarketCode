@@ -30,7 +30,7 @@ namespace Core
                 .OfType<Order>(); // filter out nulls
         }
 
-        private Order? DecideOrder(PositionDelta delta)
+        public Order? DecideOrder(PositionDelta delta)
         {
             OptionQuote quote = delta.Quote ?? MarketDataClient.GetOptionQuote(delta.Symbol);
 
@@ -99,26 +99,26 @@ namespace Core
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.MARKET)
             {
                 orderType = OrderType.MARKET;
-                quantity = DecideBuyQuantity(quote.AskPrice, delta, currentPos); // Assume we will pay the ask price
+                quantity = DecideBuyQuantity(quote.AskPrice, delta, currentPos, quote.AskPrice); // Assume we will pay the ask price
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.DELTA_LIMIT ||
                 withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.DELTA_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price;
-                quantity = DecideBuyQuantity(limit, delta, currentPos);
+                quantity = DecideBuyQuantity(limit, delta, currentPos, quote.AskPrice);
             }
             else if (withinHighThreshold && _config.HighBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 + _config.HighBuyLimit);
-                quantity = DecideBuyQuantity(limit, delta, currentPos);
+                quantity = DecideBuyQuantity(limit, delta, currentPos, quote.AskPrice);
             }
             else if (withinLowThreshold && _config.LowBuyStrategy == BuyStrategyType.THRESHOLD_LIMIT)
             {
                 orderType = OrderType.LIMIT;
                 limit = delta.Price * (1 - _config.LowBuyLimit);
-                quantity = DecideBuyQuantity(limit, delta, currentPos);
+                quantity = DecideBuyQuantity(limit, delta, currentPos, quote.AskPrice);
             }
             else
             {
@@ -139,15 +139,24 @@ namespace Core
             }
         }
 
-        private int DecideBuyQuantity(float price, PositionDelta delta, Position? currentPos)
+        private int DecideBuyQuantity(float price, PositionDelta delta, Position? currentPos, float currentAskPrice)
         {
-            float currentPosTotalAlloc = currentPos != null
+            IEnumerable<Order> existingBuyOrders = BrokerClient.GetOpenOrdersForSymbol(delta.Symbol)
+                .Where(order => order.Instruction == InstructionType.BUY_TO_OPEN);
+            if (existingBuyOrders.Count() >= _config.MaxNumOpenBuyOrdersForSymbol)
+            {
+                Log.Warning("Many buy orders encountered: {@BuyOrders}- skipping this order.", existingBuyOrders.ToList());
+                return 0;
+            }
+            float openBuyAlloc = AggregateBuyOrders(existingBuyOrders, currentAskPrice);
+
+            float currentPosTotalAlloc = openBuyAlloc + (currentPos != null
                 ? currentPos.LongQuantity * currentPos.AveragePrice * 100
-                : 0;
+                : 0);
 
             int buyQuantity;
             if (delta.DeltaType == DeltaType.NEW ||
-                delta.DeltaType == DeltaType.ADD && currentPos == null)
+                delta.DeltaType == DeltaType.ADD && currentPosTotalAlloc == 0)
             {
                 float deltaMarketValue = delta.Price * delta.Quantity * 100;
                 float percentOfMaxSize = deltaMarketValue / _config.LivePortfolioPositionMaxSize;
@@ -158,7 +167,7 @@ namespace Core
                 }
                 buyQuantity = (int)Math.Floor((percentOfMaxSize * _config.MyPositionMaxSize) / (price * 100));
             }
-            else if (delta.DeltaType == DeltaType.ADD && currentPos != null)
+            else if (delta.DeltaType == DeltaType.ADD && currentPosTotalAlloc > 0)
             {
                 float addAlloc = currentPosTotalAlloc * delta.Percent;
                 buyQuantity = (int)Math.Floor(addAlloc / (price * 100));
@@ -179,6 +188,29 @@ namespace Core
             {
                 return buyQuantity;
             }
+        }
+
+        private static float AggregateBuyOrders(IEnumerable<Order> existingBuyOrders, float currentAskPrice)
+        {
+            float openBuyAlloc = 0;
+            foreach (Order order in existingBuyOrders)
+            {
+                float thisOrderPrice = 0;
+                if (order.OrderType == OrderType.MARKET)
+                {
+                    thisOrderPrice = currentAskPrice;
+                }
+                else if (order.OrderType == OrderType.LIMIT)
+                {
+                    thisOrderPrice = order.Limit;
+                }
+                else
+                {
+                    Log.Error("Encountered unrecognized order type. Order {@Order}", order);
+                }
+                openBuyAlloc += thisOrderPrice * order.Quantity * 100;
+            }
+            return openBuyAlloc;
         }
 
         // Currently, only market sell orders are supported
