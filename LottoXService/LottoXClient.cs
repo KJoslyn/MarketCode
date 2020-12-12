@@ -115,18 +115,13 @@ namespace LottoXService
         {
             string filepath = GetNextHeaderFilepath();
             await TakeHeaderScreenshot(filepath);
-            bool changed = HeaderConsistencyClient.UpdateImageAndCheckHasChanged(filepath);
-            if (!changed)
-            {
-                File.Delete(filepath);
-            }
-            return changed;
+            return HeaderConsistencyClient.UpdateImageAndCheckHasChanged(filepath);
         }
 
         private static int GetCurrentHeaderScreenshotNumber()
         {
             Regex reg = new Regex(@"header-(\d+).png");
-            string[] files = Directory.GetFiles("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots", "*.png");
+            string[] files = Directory.GetFiles("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/headers", "*.png");
             IEnumerable<string> matches = files.Where(path => reg.IsMatch(path));
             if (matches.Count() == 0)
             {
@@ -140,31 +135,31 @@ namespace LottoXService
         private static string GetNextOrdersFilepath()
         {
             int current = GetCurrentHeaderScreenshotNumber();
-            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders-" + current + ".png";
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/orders/orders-" + current + ".png";
         }
 
         private static string GetNextTopOrderFilepath()
         {
             int current = GetCurrentHeaderScreenshotNumber();
-            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/toporder-" + current + ".png";
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/toporders/toporder-" + current + ".png";
         }
 
         private static string GetNextHeaderFilepath()
         {
             int next = GetCurrentHeaderScreenshotNumber() + 1;
-            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/header-" + next + ".png";
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/headers/header-" + next + ".png";
         }
 
         private static string GetNextQuantityFilepath()
         {
             int current = GetCurrentHeaderScreenshotNumber();
-            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantities-" + current + ".png";
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/quantities/quantities-" + current + ".png";
         }
 
         private static string GetNextPortfolioFilepath()
         {
             int current = GetCurrentHeaderScreenshotNumber();
-            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-" + current + ".png";
+            return "C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolios/portfolio-" + current + ".png";
         }
 
         private async Task TakeTopOrderScreenshot(string filepath)
