@@ -40,9 +40,12 @@ namespace TDAmeritrade.Model
         public string Duration { get; init; }
         public string OrderStrategyType { get; init; }
         public IList<OrderLeg> OrderLegCollection { get; init; }
+        public float Quantity { get; init; }
+
+        // Set by TD Ameritrade when an order is received, not by our constructor
         public string? OrderId { get; init; }
         public string? Status { get; init; }
-        public float Quantity { get; init; }
+        public string? EnteredTime { get; init; }
 
         [JsonIgnore]
         public string Instruction { get => OrderLegCollection[0].Instruction; }
@@ -55,6 +58,7 @@ namespace TDAmeritrade.Model
                 Status == OrderStatus.WORKING;
         }
 
+        [JsonIgnore]
         public override string Symbol { get => base.Symbol; init => base.Symbol = value; }
     }
 }
