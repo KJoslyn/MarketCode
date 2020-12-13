@@ -34,5 +34,16 @@ namespace Core.Model
         public string OrderType { get; }
         public float Limit { get; }
         public DateTime? CancelTime { get; }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj == null) return false;
+            Order other = (Order)obj;
+            return Symbol == other.Symbol &&
+                Quantity == other.Quantity &&
+                Instruction == other.Instruction &&
+                OrderType == other.OrderType &&
+                Limit == other.Limit;
+        }
     }
 }

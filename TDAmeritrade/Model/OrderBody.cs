@@ -42,23 +42,18 @@ namespace TDAmeritrade.Model
         public IList<OrderLeg> OrderLegCollection { get; init; }
         public float Quantity { get; init; }
 
-        // Set by TD Ameritrade when an order is received, not by our constructor
-        public string? OrderId { get; init; }
-        public string? Status { get; init; }
-        public string? EnteredTime { get; init; }
+        [JsonIgnore]
+        public override string Symbol { get => base.Symbol; init => base.Symbol = value; }
 
         [JsonIgnore]
         public string Instruction { get => OrderLegCollection[0].Instruction; }
 
-        [JsonIgnore]
-        public bool IsOpenOrder
-        {
-            get => Status == OrderStatus.ACCEPTED ||
-                Status == OrderStatus.QUEUED ||
-                Status == OrderStatus.WORKING;
-        }
 
-        [JsonIgnore]
-        public override string Symbol { get => base.Symbol; init => base.Symbol = value; }
+        public Order ToOrder()
+        {
+            bool success = float.TryParse(Price, out float price);
+            price = success ? price : 0;
+            return new Order(Symbol, (int)Quantity, Instruction, OrderType, price);
+        }
     }
 }

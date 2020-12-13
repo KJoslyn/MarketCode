@@ -106,29 +106,69 @@ namespace TDAmeritrade
             IRestResponse response = ExecuteRequest(client, request);
             Log.Information("Response: {@Response}", response);
 
-            IEnumerable<OrderBody> bodies = GetOrderBodies();
-            IEnumerable<Order> orders = GetOrders();
-
             // Look at most recent "Accepted? or queued?" order. If it is not the expected symbol, quantity, etc., throw exception. Otherwise, get its orderId.
             // use enteredTime
 
-            if (order.CancelTime != null)
+            OrderBody fetchedOrderBody = FetchOrderBody(order);
+            if (fetchedOrderBody.OrderId == null)
             {
-                new Thread(() => CancelOrderAtTime("", (DateTime)order.CancelTime)).Start();
+                Log.Error("OrderId null: Order {@Order}, OrderBody {@OrderBody}", order, fetchedOrderBody);
+                throw new Exception();
             }
-            // TODO: make sure ok
+            else if (fetchedOrderBody.Status == OrderStatus.REJECTED)
+            {
+                Log.Error("Order rejected: Order {@Order}, OrderBody {@OrderBody}", order, fetchedOrderBody);
+                throw new Exception();
+            }
+            else if (fetchedOrderBody.IsOpenOrder && 
+                order.CancelTime != null)
+            {
+                string orderId = fetchedOrderBody.OrderId;
+                bool IsOrderOpen() => GetOrderBody(orderId).IsOpenOrder;
+                void DeleteOrder() => CancelOrder(orderId);
+                new DelayedActionThread(IsOrderOpen, DeleteOrder, (DateTime)order.CancelTime, 60 * 1000).Run();
+            }
+        }
+
+        private OrderBody FetchOrderBody(Order order)
+        {
+            IEnumerable<OrderBody> orderBodies = GetOrderBodies()
+                .Where(body => body.Symbol == order.Symbol)
+                .OrderByDescending(body => body.EnteredDateTime);
+
+            OrderBody? thisOrderBody = orderBodies.FirstOrDefault(body => body.ToOrder().Equals(order));
+
+            if (thisOrderBody == null)
+            {
+                Log.Error("Could not fetch order body from broker. Order {@Order}", order);
+                throw new Exception();
+            }
+            else if (thisOrderBody != orderBodies.First())
+            {
+                Log.Warning("Fetched order body is not the most recent order for this symbol. Order {@Order}, OrderBody {@OrderBody}", order, thisOrderBody);
+            }
+            return thisOrderBody;
+        }
+
+        private OrderBody GetOrderBody(string orderId)
+        {
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders/" + orderId);
+            RestRequest request = CreateRequest(Method.GET);
+            ExecuteRequest(client, request);
+            IRestResponse response = ExecuteRequest(client, request);
+            return JsonConvert.DeserializeObject<OrderBody>(response.Content);
         }
 
         public IEnumerable<Order> GetOpenOrdersForSymbol(string symbol)
         {
             return GetOpenOrderBodiesForSymbol(symbol)
-                .Select(body => CreateOrderFromOrderBody(body));
+                .Select(body => body.ToOrder());
         }
 
         public IEnumerable<Order> GetOrders()
         {
             IEnumerable<OrderBody> bodies = GetOrderBodies();
-            return bodies.Select(body => CreateOrderFromOrderBody(body));
+            return bodies.Select(body => body.ToOrder());
         }
 
         private IEnumerable<OrderBody> GetOpenOrderBodiesForSymbol(string symbol)
@@ -140,12 +180,19 @@ namespace TDAmeritrade
         private void CancelExistingBuyOrders(string symbol)
         {
             IEnumerable<OrderBody> openOrders = GetOpenOrderBodiesForSymbol(symbol);
-            foreach(OrderBody body in openOrders)
+            foreach(OrderBody body in openOrders.Where(body => body.Instruction == InstructionType.BUY_TO_OPEN))
             {
-                RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders/" + body.OrderId);
-                RestRequest request = CreateRequest(Method.DELETE);
-                ExecuteRequest(client, request);
+                #pragma warning disable CS8604 // Possible null reference argument.
+                CancelOrder(body.OrderId);
+                #pragma warning restore CS8604
             }
+        }
+
+        private void CancelOrder(string orderId)
+        {
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders/" + orderId);
+            RestRequest request = CreateRequest(Method.DELETE);
+            ExecuteRequest(client, request);
         }
 
         private IEnumerable<OrderBody> GetOrderBodies()
@@ -154,21 +201,6 @@ namespace TDAmeritrade
             RestRequest request = CreateRequest(Method.GET);
             IRestResponse response = ExecuteRequest(client, request);
             return JsonConvert.DeserializeObject<List<OrderBody>>(response.Content);
-        }
-
-        private static Order CreateOrderFromOrderBody(OrderBody body)
-        {
-            bool success = float.TryParse(body.Price, out float price);
-            price = success ? price : 0;
-            return new Order(body.Symbol, (int)body.Quantity, body.Instruction, body.OrderType, price);
-        }
-
-        private static void CancelOrderAtTime(string orderId, DateTime cancelTime)
-        {
-            // Keep checking every minute. If the order is gone, end this thread.
-            // If time >= cancelTime, cancel the order.
-            double ms = (cancelTime - DateTime.Now).TotalMilliseconds;
-            Thread.Sleep((int)ms);
         }
 
         private RestRequest CreateRequest(Method method)

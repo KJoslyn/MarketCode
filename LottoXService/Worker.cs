@@ -114,9 +114,10 @@ namespace LottoXService
             //Order o1 = new Order("AAPL_201218C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03);
             //BrokerClient.PlaceOrder(o1);
 
+            BrokerClient.GetPositions();
 
-            //Log.Information("RETURNING EARLY");
-            //return;
+            Log.Information("RETURNING EARLY");
+            return;
 
             if (!MarketDataClient.IsMarketOpenToday())
             {
