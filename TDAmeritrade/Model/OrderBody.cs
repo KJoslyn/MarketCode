@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-#nullable enable
 
 namespace TDAmeritrade.Model
 {
@@ -17,7 +16,7 @@ namespace TDAmeritrade.Model
             string complexOrderStrategyType,
             string orderType,
             string session,
-            string? price,
+            string price,
             string duration,
             string orderStrategyType,
             IList<OrderLeg> orderLegCollection)
@@ -36,7 +35,7 @@ namespace TDAmeritrade.Model
         public string ComplexOrderStrategyType { get; init; }
         public string OrderType { get; init; }
         public string Session { get; init; }
-        public string? Price { get; init; }
+        public string Price { get; init; }
         public string Duration { get; init; }
         public string OrderStrategyType { get; init; }
         public IList<OrderLeg> OrderLegCollection { get; init; }
@@ -47,7 +46,6 @@ namespace TDAmeritrade.Model
 
         [JsonIgnore]
         public string Instruction { get => OrderLegCollection[0].Instruction; }
-
 
         public Order ToOrder()
         {

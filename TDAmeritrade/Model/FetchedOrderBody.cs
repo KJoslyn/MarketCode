@@ -14,10 +14,14 @@ namespace TDAmeritrade.Model
             string complexOrderStrategyType,
             string orderType,
             string session,
-            string? price,
+            string price,
             string duration,
             string orderStrategyType,
-            IList<OrderLeg> orderLegCollection): base(complexOrderStrategyType, orderType, session, price, duration, orderStrategyType, orderLegCollection) { }
+            IList<OrderLeg> orderLegCollection)
+            : base(complexOrderStrategyType, orderType, session, price, duration, orderStrategyType, orderLegCollection) 
+        {
+            throw new Exception("FetchedOrderBody constructor should not be called directly");
+        }
 
         public string OrderId { get; init; }
         public string Status { get; init; }
@@ -32,6 +36,6 @@ namespace TDAmeritrade.Model
         }
 
         [JsonIgnore]
-        public DateTime? EnteredDateTime { get => EnteredTime != null ? DateTime.Parse(EnteredTime) : null; }
+        public DateTime EnteredDateTime { get => DateTime.Parse(EnteredTime); }
     }
 }
