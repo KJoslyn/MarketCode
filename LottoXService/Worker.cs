@@ -46,13 +46,17 @@ namespace LottoXService
 
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
-            PortfolioDatabase lottoxDatabase = new LitePortfolioDatabase(_generalConfig.LottoxDatabasePath, _generalConfig.SymbolsDatabasePath);
+            string lottoxDbPath = _generalConfig.DatabasePath + "/LottoX.db";
+            string symbolsDbPath = _generalConfig.DatabasePath + "/Symbols.db";
+            PortfolioDatabase lottoxDatabase = new LitePortfolioDatabase(lottoxDbPath, symbolsDbPath);
             LivePortfolioClient = new LottoXClient(_ragingBullConfig, _ocrConfig, lottoxDatabase, MarketDataClient);
 
             if (_generalConfig.UsePaperTrade)
             {
                 Log.Information("PAPER TRADING");
-                PortfolioDatabase paperDatabase = new LitePortfolioDatabase(_generalConfig.PaperTradeDatabasePath, _generalConfig.PaperSymbolsDatabasePath);
+                string paperDbPath = _generalConfig.DatabasePath + "/Paper.db";
+                string paperSymbolsDbPath = _generalConfig.DatabasePath + "/PaperSymbols.db";
+                PortfolioDatabase paperDatabase = new LitePortfolioDatabase(paperDbPath, paperSymbolsDbPath);
                 BrokerClient = new PaperTradeBrokerClient(paperDatabase, MarketDataClient);
             }
             else
