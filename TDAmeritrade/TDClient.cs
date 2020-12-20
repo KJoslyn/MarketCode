@@ -100,11 +100,6 @@ namespace TDAmeritrade
 
         public void PlaceOrder(Order order)
         {
-            if (order.Instruction == InstructionType.SELL_TO_CLOSE)
-            {
-                CancelExistingBuyOrders(order.Symbol);
-            }
-
             RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber + "/orders");
             RestRequest request = CreateRequest(Method.POST);
             string body = CreateOrderBodyString(order);
@@ -121,11 +116,30 @@ namespace TDAmeritrade
             else if (fetchedOrderBody.IsOpenOrder && 
                 order.CancelTime != null)
             {
-                string orderId = fetchedOrderBody.OrderId;
-                bool IsOrderOpen() => FetchOrderBody(orderId).IsOpenOrder;
-                void DeleteOrder() => CancelOrder(orderId);
-                new DelayedActionThread(IsOrderOpen, DeleteOrder, (DateTime)order.CancelTime, 60 * 1000).Run();
+                CancelOrderAtCancelTime(fetchedOrderBody.OrderId, (DateTime)order.CancelTime);
             }
+        }
+
+        public void CancelExistingBuyOrders(string symbol)
+        {
+            IEnumerable<FetchedOrderBody> openOrders = GetOpenOrderBodiesForSymbol(symbol);
+            foreach(FetchedOrderBody body in openOrders.Where(body => body.Instruction == InstructionType.BUY_TO_OPEN))
+            {
+                CancelOrder(body.OrderId);
+            }
+        }
+
+        public IEnumerable<Order> GetOrders()
+        {
+            IEnumerable<FetchedOrderBody> bodies = GetOrderBodies();
+            return bodies.Select(body => body.ToOrder());
+        }
+
+        private void CancelOrderAtCancelTime(string orderId, DateTime cancelTime)
+        {
+            bool IsOrderOpen() => FetchOrderBody(orderId).IsOpenOrder;
+            void DeleteOrder() => CancelOrder(orderId);
+            new DelayedActionThread(IsOrderOpen, DeleteOrder, cancelTime, 60 * 1000).Run();
         }
 
         private FetchedOrderBody FetchOrderBody(Order order)
@@ -157,25 +171,10 @@ namespace TDAmeritrade
             return JsonConvert.DeserializeObject<FetchedOrderBody>(response.Content);
         }
 
-        public IEnumerable<Order> GetOrders()
-        {
-            IEnumerable<FetchedOrderBody> bodies = GetOrderBodies();
-            return bodies.Select(body => body.ToOrder());
-        }
-
         private IEnumerable<FetchedOrderBody> GetOpenOrderBodiesForSymbol(string symbol)
         {
             return GetOrderBodies()
                 .Where(body => body.Symbol == symbol && body.IsOpenOrder);
-        }
-
-        private void CancelExistingBuyOrders(string symbol)
-        {
-            IEnumerable<FetchedOrderBody> openOrders = GetOpenOrderBodiesForSymbol(symbol);
-            foreach(FetchedOrderBody body in openOrders.Where(body => body.Instruction == InstructionType.BUY_TO_OPEN))
-            {
-                CancelOrder(body.OrderId);
-            }
         }
 
         private void CancelOrder(string orderId)

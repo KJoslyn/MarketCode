@@ -189,6 +189,10 @@ namespace LottoXService
                         Order? order = OrderManager.DecideOrder(delta);
                         if (order != null)
                         {
+                            if (order.Instruction == InstructionType.SELL_TO_CLOSE)
+                            {
+                                BrokerClient.CancelExistingBuyOrders(order.Symbol);
+                            }
                             BrokerClient.PlaceOrder(order);
                         }
                     }

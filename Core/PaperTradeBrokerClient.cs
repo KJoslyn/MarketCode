@@ -72,6 +72,8 @@ namespace Core
             return new List<Order>();
         }
 
+        public void CancelExistingBuyOrders(string symol) { }
+
         private void PlaceBuyOrder(Order order, float price = 0)
         {
             Position? currentPos = GetPosition(order.Symbol);
