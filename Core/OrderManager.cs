@@ -133,7 +133,11 @@ namespace Core
                 return null;
             } else
             {
-                Order order = new Order(delta.Symbol, quantity, InstructionType.BUY_TO_OPEN, orderType, limit);
+                DateTime cancelTime = delta.Time.Date.Equals(DateTime.Today)
+                    ? delta.Time.AddMinutes(_config.MinutesUntilBuyOrderExpires)
+                    : DateTime.Now.AddMinutes(_config.MinutesUntilBuyOrderExpires);
+
+                Order order = new Order(delta.Symbol, quantity, InstructionType.BUY_TO_OPEN, orderType, limit, cancelTime);
                 Log.Information("Decided new Order: {@Order} for Symbol {Symbol}", order, order.Symbol);
                 return order;
             }
