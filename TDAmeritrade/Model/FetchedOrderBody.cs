@@ -18,10 +18,7 @@ namespace TDAmeritrade.Model
             string duration,
             string orderStrategyType,
             IList<OrderLeg> orderLegCollection)
-            : base(complexOrderStrategyType, orderType, session, price, duration, orderStrategyType, orderLegCollection) 
-        {
-            throw new Exception("FetchedOrderBody constructor should not be called directly");
-        }
+            : base(complexOrderStrategyType, orderType, session, price, duration, orderStrategyType, orderLegCollection) { }
 
         public string OrderId { get; init; }
         public string Status { get; init; }

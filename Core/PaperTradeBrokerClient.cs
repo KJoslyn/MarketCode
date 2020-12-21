@@ -72,7 +72,7 @@ namespace Core
             return new List<Order>();
         }
 
-        public void CancelExistingBuyOrders(string symol) { }
+        public void CancelExistingBuyOrders(string symbol) { }
 
         public float GetAvailableFundsForTrading()
         {
