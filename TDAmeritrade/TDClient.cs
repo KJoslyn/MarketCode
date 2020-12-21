@@ -112,8 +112,9 @@ namespace TDAmeritrade
             FetchedOrderBody fetchedOrderBody = FetchOrderBody(order);
             if (fetchedOrderBody.Status == OrderStatus.REJECTED)
             {
-                Log.Error("Order rejected: Order {@Order}, OrderBody {@OrderBody}", order, fetchedOrderBody);
-                throw new Exception();
+                TDClientException ex = new TDClientException("Order rejected");
+                Log.Error(ex, "Order rejected: Order {@Order}, OrderBody {@OrderBody}", order, fetchedOrderBody);
+                throw ex;
             }
             else if (fetchedOrderBody.IsOpenOrder && 
                 order.CancelTime != null)
@@ -154,8 +155,9 @@ namespace TDAmeritrade
 
             if (thisOrderBody == null)
             {
-                Log.Error("Could not fetch order body from broker. Order {@Order}", order);
-                throw new Exception();
+                TDClientException ex = new TDClientException("Could not fetch order body from broker");
+                Log.Error(ex, "Could not fetch order body from broker. Order {@Order}", order);
+                throw ex;
             }
             else if (thisOrderBody != orderBodies.First())
             {
