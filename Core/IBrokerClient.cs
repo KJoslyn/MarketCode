@@ -11,5 +11,6 @@ namespace Core
         public void PlaceOrder(Order order);
         public IEnumerable<Order> GetOpenOrdersForSymbol(string symbol);
         public void CancelExistingBuyOrders(string symbol);
+        public float GetAvailableFundsForTrading();
     }
 }

@@ -12,7 +12,6 @@ namespace Core
         public float HighBuyThreshold { get; init; }
         public float LowBuyLimit { get; init; }
         public float HighBuyLimit { get; init; }
-        public int ThresholdLimitExpireMinutes { get; init; }
         public string LowBuyStrategy { get; init; } // One of the BuyStrategyType constants
         public string HighBuyStrategy { get; init; } // One of the BuyStrategyType constants
         public float MyPositionMaxSize { get; init; }
@@ -21,5 +20,6 @@ namespace Core
         public int MinutesUntilWarnOldSellOrder { get; init; }
         public double MaxBuyPrice { get; init; }
         public int MaxNumOpenBuyOrdersForSymbol { get; init; }
+        public float MinAvailableFundsForTrading { get; init; }
     }
 }

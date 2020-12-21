@@ -182,10 +182,18 @@ namespace Core
                 return 0;
             }
 
-            float newTotalAlloc = currentPosTotalAlloc + buyQuantity * price * 100;
-            if (newTotalAlloc > _config.MyPositionMaxSize)
+            float addedAlloc = buyQuantity * price * 100;
+            float remainingFundsForTrading = BrokerClient.GetAvailableFundsForTrading() - addedAlloc;
+            float newTotalAllocThisPos = currentPosTotalAlloc + addedAlloc;
+
+            if (newTotalAllocThisPos > _config.MyPositionMaxSize)
             {
                 Log.Information("Buying " + buyQuantity + " {Symbol} would exceed maximum allocation of " + _config.MyPositionMaxSize.ToString("0.00"), delta.Symbol);
+                return 0;
+            }
+            else if (remainingFundsForTrading < _config.MinAvailableFundsForTrading)
+            {
+                Log.Information("Buying " + buyQuantity + " {Symbol} would put available funds below " + _config.MinAvailableFundsForTrading.ToString("0.00"), delta.Symbol);
                 return 0;
             }
             else

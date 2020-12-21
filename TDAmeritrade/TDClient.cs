@@ -55,11 +55,7 @@ namespace TDAmeritrade
 
         public IEnumerable<Position> GetPositions()
         {
-            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber);
-            RestRequest request = CreateRequest(Method.GET);
-            request.AddParameter("fields", "positions");
-            IRestResponse response = ExecuteRequest(client, request);
-            Account account = JsonConvert.DeserializeObject<Account>(response.Content);
+            Account account = GetAccount();
             return account.SecuritiesAccount.Positions.Cast<Position>().ToList();
         }
 
@@ -96,6 +92,12 @@ namespace TDAmeritrade
         {
             return GetOpenOrderBodiesForSymbol(symbol)
                 .Select(body => body.ToOrder());
+        }
+
+        public float GetAvailableFundsForTrading()
+        {
+            Account account = GetAccount();
+            return account.SecuritiesAccount.CurrentBalances.AvailableFundsNonMarginableTrade;
         }
 
         public void PlaceOrder(Order order)
@@ -190,6 +192,15 @@ namespace TDAmeritrade
             RestRequest request = CreateRequest(Method.GET);
             IRestResponse response = ExecuteRequest(client, request);
             return JsonConvert.DeserializeObject<List<FetchedOrderBody>>(response.Content);
+        }
+
+        private Account GetAccount()
+        {
+            RestClient client = new RestClient("https://api.tdameritrade.com/v1/accounts/" + AccountNumber);
+            RestRequest request = CreateRequest(Method.GET);
+            request.AddParameter("fields", "positions");
+            IRestResponse response = ExecuteRequest(client, request);
+            return JsonConvert.DeserializeObject<Account>(response.Content);
         }
 
         private RestRequest CreateRequest(Method method)

@@ -74,6 +74,11 @@ namespace Core
 
         public void CancelExistingBuyOrders(string symol) { }
 
+        public float GetAvailableFundsForTrading()
+        {
+            return float.MaxValue;
+        }
+
         private void PlaceBuyOrder(Order order, float price = 0)
         {
             Position? currentPos = GetPosition(order.Symbol);
