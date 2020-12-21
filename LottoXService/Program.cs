@@ -55,7 +55,8 @@ namespace LottoXService
                         .Configure<TDAmeritradeConfig>(configuration.GetSection("TDAmeritrade"))
                         .Configure<OCRConfig>(configuration.GetSection("AzureOCR"))
                         .Configure<GeneralConfig>(configuration.GetSection("General"))
-                        .Configure<OrderConfig>(configuration.GetSection("OrderSettings"));
+                        .Configure<OrderConfig>(configuration.GetSection("OrderSettings"))
+                        .Configure<ElmahConfig>(configuration.GetSection("Elmah"));
                 });
         }
     }

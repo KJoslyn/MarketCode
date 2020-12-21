@@ -4,6 +4,7 @@ using Core.Exceptions;
 using Core.Model;
 using Core.Model.Constants;
 using Database;
+using Elmah.Io.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -27,6 +28,7 @@ namespace LottoXService
         private readonly OCRConfig _ocrConfig;
         private readonly GeneralConfig _generalConfig;
         private readonly OrderConfig _orderConfig;
+        private readonly ElmahConfig _elmahConfig;
         private IHostApplicationLifetime _hostApplicationLifetime;
 
         public Worker(
@@ -35,7 +37,8 @@ namespace LottoXService
             IOptions<TDAmeritradeConfig> tdOptions, 
             IOptions<OCRConfig> ocrOptions, 
             IOptions<GeneralConfig> generalOptions,
-            IOptions<OrderConfig> orderOptions)
+            IOptions<OrderConfig> orderOptions,
+            IOptions<ElmahConfig> elmahOptions)
         {
             _hostApplicationLifetime = hostApplicationLifetime;
             _ragingBullConfig = rbOptions.Value;
@@ -43,7 +46,9 @@ namespace LottoXService
             _ocrConfig = ocrOptions.Value;
             _generalConfig = generalOptions.Value;
             _orderConfig = orderOptions.Value;
+            _elmahConfig = elmahOptions.Value;
 
+            ElmahClient = ElmahioAPI.Create(_elmahConfig.ApiKey);
             TDClient tdClient = new TDClient(_tdAmeritradeConfig);
             MarketDataClient = tdClient;
             string lottoxDbPath = _generalConfig.DatabasePath + "/LottoX.db";
@@ -71,6 +76,7 @@ namespace LottoXService
         private LivePortfolioClient LivePortfolioClient { get; }
         private OrderManager OrderManager { get; }
         private MarketDataClient MarketDataClient { get; }
+        private IElmahioAPI ElmahClient { get; }
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
@@ -115,10 +121,12 @@ namespace LottoXService
 
             //IList<Position> positions = await ((LottoXClient)LivePortfolioClient).GetPositionsFromImage("C:/Users/Admin/WindowsServices/MarketCode/LottoXService/screenshots/portfolio-4380.png");
 
-            //Order o1 = new Order("AAPL_201218C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03);
+            //Order o1 = new Order("AAPL_201231C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03);
+            //Order o2 = new Order("CMG_201231C150", 1, InstructionType.BUY_TO_OPEN, OrderType.LIMIT, (float).03);
             //BrokerClient.PlaceOrder(o1);
+            //BrokerClient.PlaceOrder(o2);
 
-            BrokerClient.GetPositions();
+            BrokerClient.CancelExistingBuyOrders("ZM_210115C550");
 
             Log.Information("RETURNING EARLY");
             return;
@@ -146,6 +154,7 @@ namespace LottoXService
                 if (now >= marketCloseTime)
                 {
                     Log.Information("Market now closed!");
+                    ElmahClient.Dispose();
                     //Log.Information("NOT BREAKING ON MARKET CLOSED");
                     break;
                 }
@@ -160,6 +169,8 @@ namespace LottoXService
 
                 try
                 {
+                    Task _ = ElmahClient.Heartbeats.HealthyAsync(new Guid(_elmahConfig.LogId), _elmahConfig.HeartbeatId);
+
                     TimeSortedCollection<PositionDelta> deltas;
 
                     if (seedOrdersFilename.Length > 0)

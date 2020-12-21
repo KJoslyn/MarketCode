@@ -7,10 +7,8 @@ using RestSharp;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using TDAmeritrade.Authentication;
 using TDAmeritrade.Model;
 #nullable enable
@@ -246,35 +244,5 @@ namespace TDAmeritrade
             Log.Information("TDAm Order: {@Order}, string: {OrderStr}, Symbol {Symbol}", orderBody, orderBodyStr, instrument.Symbol);
             return orderBodyStr;
         }
-
-        //public OptionQuote GetQuote(string symbol)
-        //{
-        //    Regex optionSymbolRegex = new Regex(@"^([A-Z]{1,5})_(\d{6})([CP])(\d+(.\d)?)");
-        //    GroupCollection matchGroups = optionSymbolRegex.Match(symbol).Groups;
-        //    string underlyingSymbol = matchGroups[1].Value;
-        //    string date = DateTime.ParseExact(matchGroups[2].Value, "yyMMdd", CultureInfo.InvariantCulture)
-        //        .ToString("yyyy-MM-dd");
-        //    string contractType = matchGroups[3].Value == "C"
-        //        ? PutCall.CALL
-        //        : PutCall.PUT;
-        //    string strike = matchGroups[4].Value;
-
-        //    RestClient client = new RestClient("https://api.tdameritrade.com/v1/marketdata/chains");
-        //    RestRequest request = CreateRequest(Method.GET);
-        //    request.AddQueryParameter("symbol", underlyingSymbol);
-        //    request.AddQueryParameter("contractType", contractType);
-        //    request.AddQueryParameter("includeQuotes", "TRUE");
-        //    request.AddQueryParameter("strike", strike);
-        //    request.AddQueryParameter("fromDate", date);
-        //    request.AddQueryParameter("toDate", date);
-        //    IRestResponse response = ExecuteRequest(client, request);
-
-        //    Regex responseRegex = new Regex("({\"putCall\".*})]");
-        //    GroupCollection responseMatchGroups = responseRegex.Match(response.Content).Groups;
-        //    string optionQuoteStr = responseMatchGroups[1].Value;
-        //    OptionQuote quote = JsonConvert.DeserializeObject<OptionQuote>(optionQuoteStr);
-        //    return quote;
-        //}
     }
 }
-
