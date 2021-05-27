@@ -1,3 +1,5 @@
+using AzureOCR;
+using Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -43,13 +45,18 @@ namespace LottoXService
         public static IHostBuilder CreateHostBuilder(string[] args, IConfigurationRoot configuration)
         {
             return Host.CreateDefaultBuilder(args)
+                .UseWindowsService()
                 .UseSerilog()
                 .ConfigureServices((hostcontext, services) =>
                 {
                     services.AddHostedService<Worker>()
                         .AddOptions()
                         .Configure<RagingBullConfig>(configuration.GetSection("RagingBull"))
-                        .Configure<TDAmeritradeConfig>(configuration.GetSection("TDAmeritrade"));
+                        .Configure<TDAmeritradeConfig>(configuration.GetSection("TDAmeritrade"))
+                        .Configure<OCRConfig>(configuration.GetSection("AzureOCR"))
+                        .Configure<GeneralConfig>(configuration.GetSection("General"))
+                        .Configure<OrderConfig>(configuration.GetSection("OrderSettings"))
+                        .Configure<ElmahConfig>(configuration.GetSection("Elmah"));
                 });
         }
     }

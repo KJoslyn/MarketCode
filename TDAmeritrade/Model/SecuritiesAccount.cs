@@ -1,10 +1,10 @@
-﻿using Core.Model;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace TDAmeritrade.Model
 {
     internal class SecuritiesAccount
     {
-        public IList<Position> Positions { get; init; }
+        public IList<TDPosition> Positions { get; init; }
+        public CurrentBalances CurrentBalances { get; init; }
     }
 }
